@@ -1,131 +1,173 @@
-﻿#region Using Directives
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Diagnostics;
+using System.Security.Policy;
+using SFML.Window;
+using SFML.Graphics;
+using SFML.System;
+using OpenCL;
 using System.Threading.Tasks;
-using OpenCl.DotNetCore.CommandQueues;
-using OpenCl.DotNetCore.Contexts;
-using OpenCl.DotNetCore.Devices;
-using OpenCl.DotNetCore.Kernels;
-using OpenCl.DotNetCore.Memory;
-using OpenCl.DotNetCore.Platforms;
-using OpenCl.DotNetCore.Programs;
-using OpenCL.NetCore.Tasks;
-using OpenCL.NetCore.
 
-#endregion
-
-namespace OpenCl.DotNetCore.Tests
+namespace OPENCL_n_body
 {
-    /// <summary>
-    /// Represents a test program, that is used to test the OpenCL native interop wrapper.
-    /// </summary>
-    public class Test
+    class Program
     {
-        #region Public Static Methods
 
-        /// <summary>
-        /// This is the entrypoint to the application.
-        /// </summary>
-        /// <param name="args">The command line arguments that have been passed to the program.</param>
-        public static void Main(string[] args) => Test.MainAsync(args).Wait();
-
-        #endregion
-
-        #region Private Static Methods
-
-        /// <summary>
-        /// This is the asynchronous entrypoint to the application.
-        /// </summary>
-        /// <param name="args">The command line arguments that have been passed to the program.</param>
-        private static async Task MainAsync(string[] args)
+        static string IsPrime
         {
-            // Gets all available platforms and their corresponding devices, and prints them out in a table
-            IEnumerable<Platform> platforms = Platform.GetPlatforms();
-            ConsoleTable consoleTable = new ConsoleTable("Platform", "OpenCL Version", "Vendor", "Device", "Driver Version", "Bits", "Memory", "Clock Speed", "Available");
-            foreach (Platform platform in platforms)
+            get
             {
-                foreach (Device device in platform.GetDevices(DeviceType.All))
+                return @"
+                kernel void GetIfPrime(global int* message) 
                 {
-                    consoleTable.AddRow(
-                        platform.Name,
-                        $"{platform.Version.MajorVersion}.{platform.Version.MinorVersion}",
-                        platform.Vendor,
-                        device.Name,
-                        device.DriverVersion,
-                        $"{device.AddressBits} Bit",
-                        $"{Math.Round(device.GlobalMemorySize / 1024.0f / 1024.0f / 1024.0f, 2)} GiB",
-                        $"{device.MaximumClockFrequency} MHz",
-                        device.IsAvailable ? "✔" : "✖");
-                }
-            }
-            Console.WriteLine("Supported Platforms & Devices:");
-            consoleTable.Write(Format.Alternative);
-
-            // Gets the first available platform and selects the first device offered by the platform and prints out the chosen device
-            Device chosenDevice = platforms.FirstOrDefault().GetDevices(DeviceType.All).FirstOrDefault();
-            Console.WriteLine($"Using: {chosenDevice.Name} ({chosenDevice.Vendor})");
-            Console.WriteLine();
-
-            // Creats a new context for the selected device
-            using (Context context = Context.CreateContext(chosenDevice))
-            {
-                // Creates the kernel code, which multiplies a matrix with a vector
-                string code = @"
-                    __kernel void matvec_mult(__global float4* matrix,
-                                              __global float4* vector,
-                                              __global float* result) {
-                        int i = get_global_id(0);
-                        result[i] = dot(matrix[i], vector[0]);
-                    }";
-
-                // Creates a program and then the kernel from it
-                using (Program program = await context.CreateAndBuildProgramFromStringAsync(code))
-                {
-                    using (Kernel kernel = program.CreateKernel("matvec_mult"))
+                    int index = get_global_id(0);
+                    printf(""%s"", message);
+                    int upperl=(int)sqrt((float)message[index]);
+                    for(int i=2;i<=upperl;i++)
                     {
-                        // Creates the memory objects for the input arguments of the kernel
-                        MemoryBuffer matrixBuffer = context.CreateBuffer(MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new float[]
+                        if(message[index]%i==0)
                         {
-                             0f,  2f,  4f,  6f,
-                             8f, 10f, 12f, 14f,
-                            16f, 18f, 20f, 22f,
-                            24f, 26f, 28f, 30f
-                        });
-                        MemoryBuffer vectorBuffer = context.CreateBuffer(MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new float[] { 0f, 3f, 6f, 9f });
-                        MemoryBuffer resultBuffer = context.CreateBuffer<float>(MemoryFlag.WriteOnly, 4);
-
-                        // Tries to execute the kernel
-                        try
-                        {
-                            // Sets the arguments of the kernel
-                            kernel.SetKernelArgument(0, matrixBuffer);
-                            kernel.SetKernelArgument(1, vectorBuffer);
-                            kernel.SetKernelArgument(2, resultBuffer);
-                            
-                            // Creates a command queue, executes the kernel, and retrieves the result
-                            using (CommandQueue commandQueue = CommandQueue.CreateCommandQueue(context, chosenDevice))
-                            {
-                                await commandQueue.EnqueueNDRangeKernelAsync(kernel, 1, 4);
-                                float[] resultArray = await commandQueue.EnqueueReadBufferAsync<float>(resultBuffer, 4);
-                                Console.WriteLine($"Result: ({string.Join(", ", resultArray)})");
-                            }
+                            //printf("" %d / %d\n"",index,i );
+                            message[index]=0;
+                            return;
                         }
-                        catch (OpenClException exception)
-                        {
-                            Console.WriteLine(exception.Message);
-                        }
-
-                        // Disposes of the memory objects
-                        matrixBuffer.Dispose();
-                        vectorBuffer.Dispose();
-                        resultBuffer.Dispose();
                     }
-                }
+                    for(int i=0;i<1000000;i++)
+                    {
+                        if(i==999999)
+                        {
+                            printf('%s', i);
+                        }
+                    }
+                    //printf("" % d"",index);
+                }";
             }
         }
 
-        #endregion
+        const int WINDOW_WIDTH = 500;
+        const int WINDOW_HEIGHT = 500;
+
+        private static RenderWindow window;
+        private static byte[] windowBuffer;
+
+        static void Main()
+        {
+            Console.WriteLine("start");
+
+            Environment env = new Environment(20000);
+
+
+            window = new RenderWindow(new VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "N-Body simulation", Styles.Default);
+            window.Closed += new EventHandler(OnClose);
+
+            windowBuffer = new byte[WINDOW_WIDTH * WINDOW_HEIGHT * 4];
+
+            Texture windowTexture = new Texture(WINDOW_WIDTH, WINDOW_HEIGHT);
+            windowTexture.Update(windowBuffer);
+            Sprite windowSprite = new Sprite(windowTexture);
+
+            while (window.IsOpen)
+            {
+                window.DispatchEvents();
+
+                Stopwatch sw1 = new Stopwatch(), sw2 = new Stopwatch();
+                sw1.Start();
+                sw2.Start();
+
+                env.Attract();
+                env.Move();
+
+                sw1.Stop();
+                Console.Write($"calc: {sw1.ElapsedMilliseconds}\t");
+                sw1.Restart();
+
+                window.Clear();
+                windowBuffer = new byte[WINDOW_WIDTH * WINDOW_HEIGHT * 4];
+                DrawEnvironment(env);
+                windowTexture.Update(windowBuffer);
+                window.Draw(windowSprite);
+                window.Display();
+                //Thread.Sleep(3000);
+
+                sw1.Stop();
+                Console.Write($"gra: {sw1.ElapsedMilliseconds}\t");
+                sw2.Stop();
+                Console.Write($"oa: {sw2.ElapsedMilliseconds}\n");
+            }
+
+
+
+            int[] ArrayB = new int[5];
+
+            try
+            {
+                if (AcceleratorDevice.HasGPU)
+                {
+                    RunGPU(ArrayB);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            Console.WriteLine("All Done");
+            Console.ReadKey();
+        }
+
+        static void DrawEnvironment(Environment env)
+        {
+            DrawParticles(env);
+        }
+
+        static void DrawParticles(Environment env)
+        {
+            //foreach (Particle particle in env.particles)
+            Parallel.ForEach(env.particles, particle =>
+            {
+                /*CircleShape circ = new CircleShape(2);
+                circ.Position = new Vector2f((float)(particle.x * WINDOW_WIDTH), (float)(particle.y * WINDOW_HEIGHT));
+                circ.FillColor = new Color(0xff, 0xff, 0xff);
+                window.Draw(circ);*/
+                if (particle.x < 0 || particle.x >= 1.0 || particle.y < 0 || particle.y >= 1.0)
+                    return;
+
+                int x = (int)(particle.x * WINDOW_WIDTH);
+                int y = (int)(particle.y * WINDOW_HEIGHT);
+
+                int index = (y * WINDOW_WIDTH + x) * 4;
+
+                windowBuffer[index] = 255;
+                windowBuffer[index + 1] = 255;
+                windowBuffer[index + 2] = 255;
+                windowBuffer[index + 3] = 255;
+            });
+        }
+
+        static void OnClose(object sender, EventArgs e)
+        {
+            // Close the window when OnClose event is received
+            RenderWindow window = (RenderWindow)sender;
+            window.Close();
+        }
+
+
+        static void RunGPU(int[] WorkSet)
+        {
+            Console.WriteLine("\nRun on GPU");
+
+            EasyCL cl = new EasyCL()
+            {
+                Accelerator = AcceleratorDevice.GPU
+            };
+            cl.LoadKernel(IsPrime);
+            //cl.Invoke("GetIfPrime", 0, 1, WorkSet);    //OpenCL uses a Cache. Real speed after that
+            Stopwatch time = Stopwatch.StartNew();
+
+            cl.Invoke("GetIfPrime", 0, WorkSet.Length, WorkSet);
+
+            time.Stop();
+            double performance = WorkSet.Length / (1000000.0 * time.Elapsed.TotalSeconds);
+            Console.WriteLine("\t" + performance.ToString("0.00") + " MegaPrimes/Sec");
+        }
+
     }
 }
