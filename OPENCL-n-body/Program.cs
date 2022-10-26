@@ -6,42 +6,14 @@ using SFML.Graphics;
 using SFML.System;
 using OpenCL;
 using System.Threading.Tasks;
+using Cloo;
+using Cloo.Bindings;
+using System.IO;
 
 namespace OPENCL_n_body
 {
     class Program
     {
-
-        static string IsPrime
-        {
-            get
-            {
-                return @"
-                kernel void GetIfPrime(global int* message) 
-                {
-                    int index = get_global_id(0);
-                    printf(""%s"", message);
-                    int upperl=(int)sqrt((float)message[index]);
-                    for(int i=2;i<=upperl;i++)
-                    {
-                        if(message[index]%i==0)
-                        {
-                            //printf("" %d / %d\n"",index,i );
-                            message[index]=0;
-                            return;
-                        }
-                    }
-                    for(int i=0;i<1000000;i++)
-                    {
-                        if(i==999999)
-                        {
-                            printf('%s', i);
-                        }
-                    }
-                    //printf("" % d"",index);
-                }";
-            }
-        }
 
         const int WINDOW_WIDTH = 500;
         const int WINDOW_HEIGHT = 500;
@@ -49,11 +21,13 @@ namespace OPENCL_n_body
         private static RenderWindow window;
         private static byte[] windowBuffer;
 
+        private static ComputeProgram program;
+
         static void Main()
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(20000);
+            Environment env = new Environment(10);
 
 
             window = new RenderWindow(new VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "N-Body simulation", Styles.Default);
@@ -64,6 +38,20 @@ namespace OPENCL_n_body
             Texture windowTexture = new Texture(WINDOW_WIDTH, WINDOW_HEIGHT);
             windowTexture.Update(windowBuffer);
             Sprite windowSprite = new Sprite(windowTexture);
+
+
+            try
+            {
+                if (AcceleratorDevice.HasGPU)
+                {
+                    RunGPU(env);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            Console.WriteLine("All Done");
 
             while (window.IsOpen)
             {
@@ -93,24 +81,6 @@ namespace OPENCL_n_body
                 sw2.Stop();
                 Console.Write($"oa: {sw2.ElapsedMilliseconds}\n");
             }
-
-
-
-            int[] ArrayB = new int[5];
-
-            try
-            {
-                if (AcceleratorDevice.HasGPU)
-                {
-                    RunGPU(ArrayB);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            Console.WriteLine("All Done");
-            Console.ReadKey();
         }
 
         static void DrawEnvironment(Environment env)
@@ -150,23 +120,58 @@ namespace OPENCL_n_body
         }
 
 
-        static void RunGPU(int[] WorkSet)
+        static void RunGPU(ComputeContext context, Environment env)
         {
-            Console.WriteLine("\nRun on GPU");
+            /*
+            double[] particlesd = new double[env.particles.Length * 5];
+            int i = 0;
+            foreach (Particle particle in env.particles)
+            {
+                particlesd[i + 0] = particle.x;
+                particlesd[i + 1] = particle.y;
+                particlesd[i + 2] = particle.vx;
+                particlesd[i + 3] = particle.vy;
+                particlesd[i + 4] = particle.mass;
 
-            EasyCL cl = new EasyCL()
+                i += 5;
+            }*/
+            double[] particlesd = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
+
+            Console.WriteLine("\nStarted run on GPU");
+
+            try
+            {
+                program = new ComputeProgram(context, env.GPUattract);
+                ComputeProgramBuildNotifier notify = null;
+                program.Build(null, null, notify, IntPtr.Zero);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            program.Dispose();
+
+            OpenCL cl = new OpenCL()
             {
                 Accelerator = AcceleratorDevice.GPU
             };
-            cl.LoadKernel(IsPrime);
-            //cl.Invoke("GetIfPrime", 0, 1, WorkSet);    //OpenCL uses a Cache. Real speed after that
-            Stopwatch time = Stopwatch.StartNew();
+            OpenCL.OpenCL.SetKernel(env.GPUattract, cl);
 
-            cl.Invoke("GetIfPrime", 0, WorkSet.Length, WorkSet);
+            cl.Invoke("Attract", 0, env.particles.Length, particlesd);
 
-            time.Stop();
-            double performance = WorkSet.Length / (1000000.0 * time.Elapsed.TotalSeconds);
-            Console.WriteLine("\t" + performance.ToString("0.00") + " MegaPrimes/Sec");
+            Console.WriteLine(particlesd);
+
+            
+
+        }
+
+        private void notify(CLProgramHandle programHandle, IntPtr userDataPtr)
+        {
+            Console.WriteLine("Program build notification.");
+            byte[] bytes = program.Binaries[0];
+            Console.WriteLine("Beginning of program binary (compiled for the 1st selected device):");
+            Console.WriteLine(BitConverter.ToString(bytes, 0, 24) + "...");
         }
 
     }

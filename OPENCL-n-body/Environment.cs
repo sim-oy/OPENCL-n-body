@@ -34,6 +34,24 @@ namespace OPENCL_n_body
             }
         }
 
+        public string GPUattract
+        {
+            get
+            {
+                return @"
+                kernel double Attract(global double* message)
+                {
+                    int index = get_global_id(0);
+                    //printf(""%lf\n"", (double)message[index]);
+                    if ((double)message[index] == (double)10)
+                    {
+                        printf(""%d\n"", index);
+                        return 6.4;
+                    }
+                }";
+            }
+        }
+
         public void Attract()
         {
             Parallel.For(0, particles.Length, i =>
