@@ -31,6 +31,11 @@ namespace OPENCL_n_body
             for (int i = 0; i < particles.Length; i++)
             {
                 particles[i].Move();
+                /*
+                if (i == 0)
+                {
+                    Console.WriteLine($"{particles[i].vx}");
+                }*/
             }
         }
 
@@ -117,7 +122,6 @@ namespace OPENCL_n_body
                 particles[i].vy += sumY;
             });
         }
-
 
         public void Attract2()
         {

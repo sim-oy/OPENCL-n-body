@@ -4,9 +4,12 @@ kernel void Attract(global float * input_X, int size_X, float G, global float * 
 {
 
     int i = get_global_id(0);
+    int j = get_global_id(1);
+
+    //printf("o: %d\t %d\n", i, j);
 
     //printf(""o: %0.20f\t%0.20f\n"", input_X[i * 2], input_X[i * 2 + 1]);
-                    
+    /*
     float xi = input_X[i * 5];
     float yi = input_X[i * 5 + 1];
 
@@ -29,6 +32,23 @@ kernel void Attract(global float * input_X, int size_X, float G, global float * 
 
     output_Z[i * 2] += input_X[i * 5 + 2] + sumX;
     output_Z[i * 2 + 1] += input_X[i * 5 + 3] + sumY;
+    */
+    
+    if (i == j)
+        return;
+
+    float distanceX = input_X[j * 5] - input_X[i * 5];
+    float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
+    float dist = sqrt(distanceX * distanceX + distanceY * distanceY);
+
+    float b = G * input_X[j * 5 + 4] / (dist + 0.00001);
+    //printf(""%0.20f\t%0.20f\t%0.20f\n"", G, input_X[j * 5 + 4], (dist + 0.00001));
+       
+    output_Z[i * 2] += distanceX * b;
+    output_Z[i * 2 + 1] += distanceY * b;
+    
+    //output_Z[i * 2] += input_X[i * 5 + 2] + distanceX * b;
+    //output_Z[i * 2 + 1] += input_X[i * 5 + 3] + distanceY * b;
 
     //printf(""%lf\n"", (double)input_X[index]);
     //printf(""%d\n"", i);

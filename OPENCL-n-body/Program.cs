@@ -26,7 +26,7 @@ namespace OPENCL_n_body
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(24000);
+            Environment env = new Environment(10000);
 
 
             window = new RenderWindow(new VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "N-Body simulation", Styles.Default);
@@ -39,7 +39,6 @@ namespace OPENCL_n_body
             Sprite windowSprite = new Sprite(windowTexture);
             
             long[] avg_time = new long[100];
-
 
             try
             {
@@ -83,7 +82,7 @@ namespace OPENCL_n_body
 
                 Array.Copy(avg_time, 1, avg_time, 0, avg_time.Length - 1);
                 avg_time[^1] = sw2.ElapsedMilliseconds;
-
+                
                 Console.Write($"calc: {calctime}\tgra: {sw1.ElapsedMilliseconds}\t" +
                 $"oa: {sw2.ElapsedMilliseconds}\t" +
                 $"avg: {Math.Round((double)avg_time.Sum() / (double)avg_time.Length)}\t" +

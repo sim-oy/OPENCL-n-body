@@ -104,7 +104,7 @@ namespace OPENCL_n_body
             //Stopwatch sw1 = new Stopwatch();
             //sw1.Start();
 
-            queue.Execute(kernel, null, new long[] { env.particles.Length }, null, eventList);
+            queue.Execute(kernel, null, new long[] { env.particles.Length, env.particles.Length }, null, eventList);
 
             queue.ReadFromBuffer(z, ref output_Z, false, eventList);
 
@@ -115,8 +115,8 @@ namespace OPENCL_n_body
             int j = 0;
             foreach (Particle particle in env.particles)
             {
-                particle.vx = (double)output_Z[j * 2];
-                particle.vy = (double)output_Z[j * 2 + 1];
+                particle.vx += (double)output_Z[j * 2];
+                particle.vy += (double)output_Z[j * 2 + 1];
                 j++;
             }
 
