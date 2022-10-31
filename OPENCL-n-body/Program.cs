@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cloo;
 using Cloo.Bindings;
 using System.IO;
+using System.Linq;
 
 namespace OPENCL_n_body
 {
@@ -21,13 +22,11 @@ namespace OPENCL_n_body
         private static RenderWindow window;
         private static byte[] windowBuffer;
 
-        private static ComputeProgram program;
-
         static void Main()
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(10);
+            Environment env = new Environment(24000);
 
 
             window = new RenderWindow(new VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "N-Body simulation", Styles.Default);
@@ -38,34 +37,37 @@ namespace OPENCL_n_body
             Texture windowTexture = new Texture(WINDOW_WIDTH, WINDOW_HEIGHT);
             windowTexture.Update(windowBuffer);
             Sprite windowSprite = new Sprite(windowTexture);
+            
+            long[] avg_time = new long[100];
 
 
             try
             {
                 if (AcceleratorDevice.HasGPU)
                 {
-                    RunGPU(env);
+                    GPU.Init(env);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
-            Console.WriteLine("All Done");
+            Console.WriteLine("Init");
 
             while (window.IsOpen)
-            {
+            {   
                 window.DispatchEvents();
 
                 Stopwatch sw1 = new Stopwatch(), sw2 = new Stopwatch();
                 sw1.Start();
                 sw2.Start();
 
-                env.Attract();
+                //env.Attract2();
+                GPU.Run(env);
                 env.Move();
 
                 sw1.Stop();
-                Console.Write($"calc: {sw1.ElapsedMilliseconds}\t");
+                long calctime = sw1.ElapsedMilliseconds;
                 sw1.Restart();
 
                 window.Clear();
@@ -77,9 +79,17 @@ namespace OPENCL_n_body
                 //Thread.Sleep(3000);
 
                 sw1.Stop();
-                Console.Write($"gra: {sw1.ElapsedMilliseconds}\t");
                 sw2.Stop();
-                Console.Write($"oa: {sw2.ElapsedMilliseconds}\n");
+
+                Array.Copy(avg_time, 1, avg_time, 0, avg_time.Length - 1);
+                avg_time[^1] = sw2.ElapsedMilliseconds;
+
+                Console.Write($"calc: {calctime}\tgra: {sw1.ElapsedMilliseconds}\t" +
+                $"oa: {sw2.ElapsedMilliseconds}\t" +
+                $"avg: {Math.Round((double)avg_time.Sum() / (double)avg_time.Length)}\t" +
+                $"fps: {Math.Round(1.0 / ((double)sw2.ElapsedMilliseconds / 1000.0), 2)}\n"
+                );
+                
             }
         }
 
@@ -117,61 +127,6 @@ namespace OPENCL_n_body
             // Close the window when OnClose event is received
             RenderWindow window = (RenderWindow)sender;
             window.Close();
-        }
-
-
-        static void RunGPU(ComputeContext context, Environment env)
-        {
-            /*
-            double[] particlesd = new double[env.particles.Length * 5];
-            int i = 0;
-            foreach (Particle particle in env.particles)
-            {
-                particlesd[i + 0] = particle.x;
-                particlesd[i + 1] = particle.y;
-                particlesd[i + 2] = particle.vx;
-                particlesd[i + 3] = particle.vy;
-                particlesd[i + 4] = particle.mass;
-
-                i += 5;
-            }*/
-            double[] particlesd = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
-
-            Console.WriteLine("\nStarted run on GPU");
-
-            try
-            {
-                program = new ComputeProgram(context, env.GPUattract);
-                ComputeProgramBuildNotifier notify = null;
-                program.Build(null, null, notify, IntPtr.Zero);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-
-            program.Dispose();
-
-            OpenCL cl = new OpenCL()
-            {
-                Accelerator = AcceleratorDevice.GPU
-            };
-            OpenCL.OpenCL.SetKernel(env.GPUattract, cl);
-
-            cl.Invoke("Attract", 0, env.particles.Length, particlesd);
-
-            Console.WriteLine(particlesd);
-
-            
-
-        }
-
-        private void notify(CLProgramHandle programHandle, IntPtr userDataPtr)
-        {
-            Console.WriteLine("Program build notification.");
-            byte[] bytes = program.Binaries[0];
-            Console.WriteLine("Beginning of program binary (compiled for the 1st selected device):");
-            Console.WriteLine(BitConverter.ToString(bytes, 0, 24) + "...");
         }
 
     }

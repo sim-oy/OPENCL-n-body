@@ -8,7 +8,7 @@ namespace OPENCL_n_body
 {
     class Environment
     {
-        const double G = 0.00000001;
+        public const double G = 0.00000001;
 
         public Particle[] particles;
 
@@ -39,15 +39,56 @@ namespace OPENCL_n_body
             get
             {
                 return @"
-                kernel double Attract(global double* message)
+                kernel void Attract(global float * input_X, int size_X, float G, global float * output_Z)
                 {
-                    int index = get_global_id(0);
-                    //printf(""%lf\n"", (double)message[index]);
-                    if ((double)message[index] == (double)10)
+    
+                    int i = get_global_id(0);
+
+                    //printf(""o: %0.20f\t%0.20f\n"", input_X[i * 2], input_X[i * 2 + 1]);
+                    
+                    float xi = input_X[i * 5];
+                    float yi = input_X[i * 5 + 1];
+
+                    float sumX = 0, sumY = 0;
+
+                    for (int j = 0; j < size_X; j++)
                     {
-                        printf(""%d\n"", index);
-                        return 6.4;
+                        if (i == j)
+                        {
+                            continue;
+                        }
+            
+                        float distanceX = input_X[j * 5] - xi;
+                        float distanceY = input_X[j * 5 + 1] - yi;
+            
+                        float dist = sqrt(distanceX * distanceX + distanceY * distanceY);
+            
+                        float b = G * input_X[j * 5 + 4] / (dist + 0.00001);
+                        //printf(""%0.20f\t%0.20f\t%0.20f\n"", G, input_X[j * 5 + 4], (dist + 0.00001));
+                        sumX += distanceX * b;
+                        sumY += distanceY * b;
+            
+            
                     }
+
+                    output_Z[i * 2] += input_X[i * 5 + 2] + sumX;
+                    output_Z[i * 2 + 1] += input_X[i * 5 + 3] + sumY;
+
+                    //printf(""%lf\n"", (double)input_X[index]);
+                    //printf(""%d\n"", i);
+                    //printf(""%d\n"", size_X);
+                    /*
+                    if ((float)i == (float)(size_X - 1))
+                    {
+                        #define fmt ""%s\n""
+                        printf(""%d\n"", i);
+                        printf(""G: %0.10f\n"", G);
+                        //output_Z[i] = 6.4;
+                        for (int i = 0; i < size_X * 2; i++)
+                        {
+                            printf(""%0.38f\n"", output_Z[i]);
+                        }
+                    }*/
                 }";
             }
         }
@@ -89,6 +130,7 @@ namespace OPENCL_n_body
                     double distanceX = particles[j].x - particles[i].x;
                     double distanceY = particles[j].y - particles[i].y;
                     double dist = Math.Sqrt(distanceX * distanceX + distanceY * distanceY);
+                    //double dist = distanceX * distanceX + distanceY * distanceY;
 
                     double b = G / (dist + 0.00001);
 
@@ -111,3 +153,62 @@ namespace OPENCL_n_body
         }
     }
 }
+
+/*
+#include <stdio.h>
+#include <math.h>
+
+void Attract(float* input_X, int size_X, float* output_Z)
+{
+    for (int i = 0; i < size_X; i++)
+    {
+        float G = 0.00000001;
+        float xi = input_X[i * 5];
+        float yi = input_X[i * 5 + 1];
+
+        float sumX = 0, sumY = 0;
+        for (int j = 0; j < size_X; j++)
+        {
+            if (i == j)
+            {
+                continue;
+            }
+            
+            float distanceX = input_X[j * 5] - xi;
+            float distanceY = input_X[j * 5 + 1] - yi;
+            
+            float dist = sqrt(distanceX * distanceX + distanceY * distanceY);
+            
+            float b = G * input_X[j * 5 + 4] / (dist + 0.00001);
+            //printf("%0.20f\t%0.20f\t%0.20f\n", G, input_X[j * 5 + 4], (dist + 0.00001));
+            sumX += distanceX * b;
+            sumY += distanceY * b;
+            
+            
+        }
+
+        output_Z[i * 2] += sumX;
+        output_Z[i * 2 + 1] += sumY;
+        
+        //printf("%lf\n", output_Z[i * 2 + 1]);
+    }
+    printf("end\n");
+}
+
+int main()
+{
+    printf("Hello World\n");
+
+    int size_X = 3;
+    float input[3 * 5] = { 0.4, 0.2, 0, 0, -0.48, 0.4, -0.2, 0, 0, 0.48, -0.4, 0.2, 0, 0, 0.48 };
+    float output[3 * 2];
+
+    Attract(input, size_X, output);
+    for (int i = 0; i < size_X * 2; i++)
+    {
+        printf("%0.20f\n", output[i]);
+    }
+
+    return 0;
+}
+*/
