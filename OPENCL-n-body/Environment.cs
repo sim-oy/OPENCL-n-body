@@ -14,16 +14,27 @@ namespace OPENCL_n_body
 
         public Environment(int particleAmount)
         {
-            particles = new Particle[particleAmount];
+            particles = new Particle[particleAmount+1];
 
             Random rng = new Random();
 
             for (int i = 0; i < particleAmount; i++)
             {
-                particles[i] = new Particle(rng.NextDouble(), rng.NextDouble(), rng.NextDouble());
+                particles[i] = new Particle(rng.NextDouble(), rng.NextDouble(), 0, 0, rng.NextDouble());
             }
 
-            //particles[particleAmount] = new Particle(0.5, 0.5, 500);
+            particles[particleAmount] = new Particle(0.5, 0.5, 0, 0, 5000);
+        }
+
+        public void Environment2()
+        {
+            particles = new Particle[2];
+
+            Random rng = new Random();
+
+            particles[0] = new Particle(0.5, 0.5, 0, 0, 3000);
+
+            particles[1] = new Particle(0.5, 0.25, 0.005, 0, 1);
         }
 
         public void Move()
@@ -112,7 +123,7 @@ namespace OPENCL_n_body
                     double distanceY = particles[j].y - particles[i].y;
                     double dist = Math.Sqrt(distanceX * distanceX + distanceY * distanceY);
 
-                    double b = G * particles[j].mass / (dist + 0.00001);
+                    double b = G * particles[j].mass / (dist + 0.000000001);
 
                     sumX += distanceX * b;
                     sumY += distanceY * b;
@@ -136,7 +147,7 @@ namespace OPENCL_n_body
                     double dist = Math.Sqrt(distanceX * distanceX + distanceY * distanceY);
                     //double dist = distanceX * distanceX + distanceY * distanceY;
 
-                    double b = G / (dist + 0.00001);
+                    double b = G / (dist + 0.000000001);
 
                     double Ai = particles[j].mass * b;
                     double Aj = particles[i].mass * b;
@@ -153,6 +164,27 @@ namespace OPENCL_n_body
 
                 particles[i].vx += sumXi;
                 particles[i].vy += sumYi;
+            });
+        }
+
+        public void Attract3(float[] input_X, int size_X, float G1, float[] output_Z)
+        {
+            Parallel.For(0, size_X, i =>
+            {
+                for (int j = 0; j < size_X; j++)
+                {
+                    if (i == j)
+                        continue;
+
+                    float distanceX = input_X[j * 5] - input_X[i * 5];
+                    float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
+                    float dist = (float)Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
+
+                    float b = G1 * input_X[j * 5 + 4] / (dist /*+ (float)0.1*/);
+
+                    output_Z[i * 2] += distanceX * b;
+                    output_Z[i * 2 + 1] += distanceY * b;
+                }
             });
         }
     }

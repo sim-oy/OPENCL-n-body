@@ -115,12 +115,47 @@ namespace OPENCL_n_body
             int j = 0;
             foreach (Particle particle in env.particles)
             {
-                particle.vx += (double)output_Z[j * 2];
-                particle.vy += (double)output_Z[j * 2 + 1];
-                j++;
+                particle.vx += (double)output_Z[j];
+                particle.vy += (double)output_Z[j + 1];
+                j += 2;
             }
 
             eventList.Clear();
+        }
+
+        public static void RunCPUasGPU(Environment env)
+        {
+            input_X = new float[env.particles.Length * 5];
+            int i = 0;
+            foreach (Particle particle in env.particles)
+            {
+                input_X[i + 0] = (float)particle.x;
+                input_X[i + 1] = (float)particle.y;
+                input_X[i + 2] = (float)particle.vx;
+                input_X[i + 3] = (float)particle.vy;
+                input_X[i + 4] = (float)particle.mass;
+
+                i += 5;
+            }
+
+            output_Z = new float[env.particles.Length * 2];
+
+            //Stopwatch sw1 = new Stopwatch();
+            //sw1.Start();
+
+            env.Attract3(input_X, env.particles.Length, (float)Environment.G, output_Z);
+
+            //sw1.Stop();
+            //Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
+
+            int j = 0;
+            foreach (Particle particle in env.particles)
+            {
+                particle.vx += (double)output_Z[j];
+                particle.vy += (double)output_Z[j + 1];
+                j += 2;
+            }
+
         }
     }
 }

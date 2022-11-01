@@ -14,10 +14,12 @@ namespace OPENCL_n_body
         public double vy;
         public double mass;
 
-        public Particle(double x, double y, double mass)
+        public Particle(double x, double y, double vx, double vy, double mass)
         {
             this.x = x;
             this.y = y;
+            this.vx = vx;
+            this.vy = vy;
             this.mass = mass;
         }
 

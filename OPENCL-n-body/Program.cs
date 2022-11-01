@@ -10,14 +10,15 @@ using Cloo;
 using Cloo.Bindings;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace OPENCL_n_body
 {
     class Program
     {
 
-        const int WINDOW_WIDTH = 500;
-        const int WINDOW_HEIGHT = 500;
+        const int WINDOW_WIDTH = 700;
+        const int WINDOW_HEIGHT = 700;
 
         private static RenderWindow window;
         private static byte[] windowBuffer;
@@ -26,7 +27,8 @@ namespace OPENCL_n_body
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(10000);
+            Environment env = new Environment(2);
+            env.Environment2();
 
 
             window = new RenderWindow(new VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "N-Body simulation", Styles.Default);
@@ -62,20 +64,26 @@ namespace OPENCL_n_body
                 sw2.Start();
 
                 //env.Attract2();
-                GPU.Run(env);
+                //GPU.Run(env);
+                GPU.RunCPUasGPU(env);
                 env.Move();
 
                 sw1.Stop();
                 long calctime = sw1.ElapsedMilliseconds;
                 sw1.Restart();
 
-                window.Clear();
+                //window.Clear();
                 windowBuffer = new byte[WINDOW_WIDTH * WINDOW_HEIGHT * 4];
                 DrawEnvironment(env);
                 windowTexture.Update(windowBuffer);
                 window.Draw(windowSprite);
+
+                CircleShape circ = new CircleShape(2);
+                circ.Position = new Vector2f((float)(env.particles[0].x * WINDOW_WIDTH), (float)(env.particles[0].y * WINDOW_HEIGHT));
+                circ.FillColor = new Color(0xff, 0x00, 0x00);
+                window.Draw(circ);
+
                 window.Display();
-                //Thread.Sleep(3000);
 
                 sw1.Stop();
                 sw2.Stop();
@@ -88,7 +96,8 @@ namespace OPENCL_n_body
                 $"avg: {Math.Round((double)avg_time.Sum() / (double)avg_time.Length)}\t" +
                 $"fps: {Math.Round(1.0 / ((double)sw2.ElapsedMilliseconds / 1000.0), 2)}\n"
                 );
-                
+
+                //Thread.Sleep(30);
             }
         }
 
@@ -102,10 +111,6 @@ namespace OPENCL_n_body
             //foreach (Particle particle in env.particles)
             Parallel.ForEach(env.particles, particle =>
             {
-                /*CircleShape circ = new CircleShape(2);
-                circ.Position = new Vector2f((float)(particle.x * WINDOW_WIDTH), (float)(particle.y * WINDOW_HEIGHT));
-                circ.FillColor = new Color(0xff, 0xff, 0xff);
-                window.Draw(circ);*/
                 if (particle.x < 0 || particle.x >= 1.0 || particle.y < 0 || particle.y >= 1.0)
                     return;
 
@@ -119,6 +124,11 @@ namespace OPENCL_n_body
                 windowBuffer[index + 2] = 255;
                 windowBuffer[index + 3] = 255;
             });
+
+            CircleShape circ = new CircleShape(2);
+            circ.Position = new Vector2f((float)(env.particles[0].x * WINDOW_WIDTH), (float)(env.particles[0].y * WINDOW_HEIGHT));
+            circ.FillColor = new Color(0xff, 0x00, 0x00);
+            window.Draw(circ);
         }
 
         static void OnClose(object sender, EventArgs e)
