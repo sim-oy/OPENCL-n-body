@@ -32,9 +32,9 @@ namespace OPENCL_n_body
 
             Random rng = new Random();
 
-            particles[0] = new Particle(0.5, 0.5, 0, 0, 3000);
+            particles[0] = new Particle(0.5, 0.5, 0, 0, 500);
 
-            particles[1] = new Particle(0.5, 0.25, 0.005, 0, 1);
+            particles[1] = new Particle(0.5, 0.74, 0.005, -0.001, 0.0001);
         }
 
         public void Move()
@@ -147,7 +147,7 @@ namespace OPENCL_n_body
                     double dist = Math.Sqrt(distanceX * distanceX + distanceY * distanceY);
                     //double dist = distanceX * distanceX + distanceY * distanceY;
 
-                    double b = G / (dist + 0.000000001);
+                    double b = G / (dist + 0.00001);
 
                     double Ai = particles[j].mass * b;
                     double Aj = particles[i].mass * b;
@@ -180,7 +180,7 @@ namespace OPENCL_n_body
                     float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
                     float dist = (float)Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
 
-                    float b = G1 * input_X[j * 5 + 4] / (dist /*+ (float)0.1*/);
+                    float b = G1 * input_X[j * 5 + 4] / (dist + (float)0.0001);
 
                     output_Z[i * 2] += distanceX * b;
                     output_Z[i * 2 + 1] += distanceY * b;
