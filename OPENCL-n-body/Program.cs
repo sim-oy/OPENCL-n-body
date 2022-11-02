@@ -97,7 +97,7 @@ namespace OPENCL_n_body
                 $"fps: {Math.Round(1.0 / ((double)sw2.ElapsedMilliseconds / 1000.0), 2)}\n"
                 );
 
-                //Thread.Sleep(10);
+                //Thread.Sleep(1);
             }
         }
 

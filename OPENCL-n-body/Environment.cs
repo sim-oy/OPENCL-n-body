@@ -34,7 +34,7 @@ namespace OPENCL_n_body
 
             particles[0] = new Particle(0.5, 0.5, 0, 0, 500);
 
-            particles[1] = new Particle(0.5, 0.74, 0.005, -0.001, 0.0001);
+            particles[1] = new Particle(0.5, 0.4, 0.0087, -0.001, 0.0001);
         }
 
         public void Move()
@@ -185,6 +185,31 @@ namespace OPENCL_n_body
                     output_Z[i * 2] += distanceX * b;
                     output_Z[i * 2 + 1] += distanceY * b;
                 }
+            });
+        }
+
+        public void Attract4()
+        {
+            Parallel.For(0, particles.Length, i =>
+            {
+                double sumX = 0, sumY = 0;
+                for (int j = 0; j < particles.Length; j++)
+                {
+                    if (i == j)
+                        continue;
+
+                    double distanceX = particles[j].x - particles[i].x;
+                    double distanceY = particles[j].y - particles[i].y;
+                    double dist = Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
+
+                    double b = G * particles[j].mass / (dist + 0.00001);
+                    
+                    sumX += distanceX * b;
+                    sumY += distanceY * b;
+                }
+
+                particles[i].vx += sumX;
+                particles[i].vy += sumY;
             });
         }
     }
