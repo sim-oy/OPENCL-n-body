@@ -143,7 +143,7 @@ namespace OPENCL_n_body
             //Stopwatch sw1 = new Stopwatch();
             //sw1.Start();
 
-            env.Attract3(input_X, env.particles.Length, (float)Environment.G, output_Z);
+            env.CPUAttract(input_X, env.particles.Length, (float)Environment.G, output_Z);
 
             //sw1.Stop();
             //Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
