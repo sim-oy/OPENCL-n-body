@@ -17,8 +17,8 @@ namespace OPENCL_n_body
     class Program
     {
 
-        const int WINDOW_WIDTH = 700;
-        const int WINDOW_HEIGHT = 700;
+        const int WINDOW_WIDTH = 500;
+        const int WINDOW_HEIGHT = 500;
 
         private static RenderWindow window;
         private static byte[] windowBuffer;
@@ -63,9 +63,9 @@ namespace OPENCL_n_body
                 sw1.Start();
                 sw2.Start();
 
-                //env.Attract2();
+                env.Attract();
                 //GPU.Run(env);
-                GPU.RunCPUasGPU(env);
+                //GPU.RunCPUasGPU(env);
                 env.Move();
 
                 sw1.Stop();

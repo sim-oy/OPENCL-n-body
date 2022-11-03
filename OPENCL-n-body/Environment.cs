@@ -34,7 +34,20 @@ namespace OPENCL_n_body
 
             particles[0] = new Particle(0.5, 0.5, 0, 0, 500);
 
-            particles[1] = new Particle(0.5, 0.4, 0.0087, -0.001, 0.0001);
+            //particles[1] = new Particle(0.5, 0.45, 0.0133, -0.001, 0.0001);//1.5
+            particles[1] = new Particle(0.5, 0.45, 0.01335, -0.00001, 0.0001);
+        }
+
+        public void Environment3()
+        {
+            particles = new Particle[2];
+
+            Random rng = new Random();
+
+            particles[0] = new Particle(0.5, 0.25, 0.0001, 0, 1.0);
+
+            //particles[1] = new Particle(0.5, 0.45, 0.0133, -0.001, 0.0001);//1.5
+            particles[1] = new Particle(0.5, 0.75, -0.0001, 0, 1.0);
         }
 
         public void Move()
@@ -121,7 +134,7 @@ namespace OPENCL_n_body
 
                     double distanceX = particles[j].x - particles[i].x;
                     double distanceY = particles[j].y - particles[i].y;
-                    double dist = Math.Sqrt(distanceX * distanceX + distanceY * distanceY);
+                    double dist = Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
 
                     double b = G * particles[j].mass / (dist + 0.000000001);
 
@@ -178,7 +191,7 @@ namespace OPENCL_n_body
 
                     float distanceX = input_X[j * 5] - input_X[i * 5];
                     float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
-                    float dist = (float)Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
+                    float dist = (float)Math.Pow(distanceX * distanceX + distanceY * distanceY, 3/2);
 
                     float b = G1 * input_X[j * 5 + 4] / (dist + (float)0.0001);
 
@@ -190,7 +203,8 @@ namespace OPENCL_n_body
 
         public void Attract4()
         {
-            Parallel.For(0, particles.Length, i =>
+            //Parallel.For(0, particles.Length, i =>
+            for (int i = 0; i < particles.Length; i++)
             {
                 double sumX = 0, sumY = 0;
                 for (int j = 0; j < particles.Length; j++)
@@ -200,17 +214,26 @@ namespace OPENCL_n_body
 
                     double distanceX = particles[j].x - particles[i].x;
                     double distanceY = particles[j].y - particles[i].y;
-                    double dist = Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
 
-                    double b = G * particles[j].mass / (dist + 0.00001);
-                    
-                    sumX += distanceX * b;
-                    sumY += distanceY * b;
+                    double x2_y2 = distanceX * distanceX + distanceY * distanceY;
+
+                    double dist = Math.Sqrt(x2_y2);
+
+                    double sx = distanceX / dist;
+                    double sy = distanceY / dist;
+
+                    //double dist = Math.Sqrt(distanceX * distanceX + distanceY * distanceY);
+
+                    //double b = G * ((particles[j].mass * particles[i].mass) / (dist * dist));
+                    double f = G * ((particles[j].mass * particles[i].mass) / x2_y2);
+
+                    sumX += f * sx;
+                    sumY += f * sy;
                 }
 
-                particles[i].vx += sumX;
-                particles[i].vy += sumY;
-            });
+                particles[i].vx += sumX / particles[i].mass;
+                particles[i].vy += sumY / particles[i].mass;
+            }//);
         }
     }
 }
