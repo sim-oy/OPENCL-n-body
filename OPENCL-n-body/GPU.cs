@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using Cloo;
 using SFML.Window;
+using OpenTK.Compute.OpenCL;
 
 namespace OPENCL_n_body
 {
@@ -27,9 +28,9 @@ namespace OPENCL_n_body
         public static void Init(Environment env)
         {
             //Console.WriteLine("\nStarted run on GPU");
-
+            
             int size_X = env.particles.Length;
-
+            
             string sourceName = @"./Kernel.cl";
             string clProgramSource = File.ReadAllText(sourceName);
 
@@ -103,9 +104,8 @@ namespace OPENCL_n_body
 
             //Stopwatch sw1 = new Stopwatch();
             //sw1.Start();
-
-            queue.Execute(kernel, null, new long[] { env.particles.Length, env.particles.Length }, null, eventList);
-
+            Func<int, int> roundup = x => x % 1024 == 0 ? x : (x - x % 1024) + 1024;
+            queue.Execute(kernel, null, new long[] { 16,16 }, new long[] { 4,4}, eventList);
             queue.ReadFromBuffer(z, ref output_Z, false, eventList);
 
             //sw1.Stop();

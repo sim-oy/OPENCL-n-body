@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="OpenTK.Compute" Version="4.7.5" />
     <PackageReference Include="SFML.Net" Version="2.5.0" />
   </ItemGroup>
 

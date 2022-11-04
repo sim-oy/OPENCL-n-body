@@ -16,7 +16,7 @@ namespace OPENCL_n_body
         {
             particles = new Particle[particleAmount + 1];
 
-            Random rng = new Random();
+            Random rng = new Random(0);
 
             for (int i = 0; i < particleAmount; i++)
             {

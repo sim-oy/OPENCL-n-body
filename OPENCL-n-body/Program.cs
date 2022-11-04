@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Reflection;
+using OpenTK.Compute;
 
 namespace OPENCL_n_body
 {
@@ -28,7 +29,7 @@ namespace OPENCL_n_body
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(7000);
+            Environment env = new Environment(50000);
             //env.Environment4();
 
 
