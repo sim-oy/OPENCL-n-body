@@ -11,6 +11,7 @@ using Cloo.Bindings;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Reflection;
 
 namespace OPENCL_n_body
 {
@@ -27,8 +28,8 @@ namespace OPENCL_n_body
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(20000);
-            //env.Environment3();
+            Environment env = new Environment(7000);
+            //env.Environment4();
 
 
             window = new RenderWindow(new VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "N-Body simulation", Styles.Default);
@@ -63,7 +64,7 @@ namespace OPENCL_n_body
                 sw1.Start();
                 sw2.Start();
 
-                //env.Attract4();
+                //env.Attract2();
                 GPU.Run(env);
                 //GPU.RunCPUasGPU(env);
                 env.Move();
@@ -90,13 +91,13 @@ namespace OPENCL_n_body
 
                 Array.Copy(avg_time, 1, avg_time, 0, avg_time.Length - 1);
                 avg_time[^1] = sw2.ElapsedMilliseconds;
-                /*
+                
                 Console.Write($"calc: {calctime}\tgra: {sw1.ElapsedMilliseconds}\t" +
                 $"oa: {sw2.ElapsedMilliseconds}\t" +
                 $"avg: {Math.Round((double)avg_time.Sum() / (double)avg_time.Length)}\t" +
                 $"fps: {Math.Round(1.0 / ((double)sw2.ElapsedMilliseconds / 1000.0), 2)}\n"
                 );
-                */
+                
                 //Thread.Sleep(1);
             }
         }
@@ -124,6 +125,7 @@ namespace OPENCL_n_body
                 windowBuffer[index + 2] = 255;
                 windowBuffer[index + 3] = 255;
             });
+
 
             CircleShape circ = new CircleShape(2);
             circ.Position = new Vector2f((float)(env.particles[0].x * WINDOW_WIDTH), (float)(env.particles[0].y * WINDOW_HEIGHT));

@@ -14,7 +14,7 @@ namespace OPENCL_n_body
 
         public Environment(int particleAmount)
         {
-            particles = new Particle[particleAmount];
+            particles = new Particle[particleAmount + 1];
 
             Random rng = new Random();
 
@@ -22,6 +22,8 @@ namespace OPENCL_n_body
             {
                 particles[i] = new Particle(rng.NextDouble(), rng.NextDouble(), 0, 0, rng.NextDouble());
             }
+
+            particles[particleAmount] = new Particle(0.5, 0.5, 0, 0, 500);
         }
 
         public void Environment2()
@@ -48,6 +50,18 @@ namespace OPENCL_n_body
             particles[1] = new Particle(0.5, 0.75, -0.00007, 0, 1.0);
         }
 
+        public void Environment4()
+        {
+            particles = new Particle[2];
+
+            Random rng = new Random();
+
+            particles[0] = new Particle(0.5, 0.25, 0, 0, 1.0);
+
+            //particles[1] = new Particle(0.5, 0.45, 0.0133, -0.001, 0.0001);//1.5
+            particles[1] = new Particle(0.5, 0.75, 0, 0, 1.0);
+        }
+
         public void Move()
         {
             double systemMomentum = 0;
@@ -55,74 +69,11 @@ namespace OPENCL_n_body
             {
                 particles[i].Move();
                 systemMomentum += particles[i].vx + particles[i].vy;
-                /*
-                if (i == 0)
-                {
-                    Console.WriteLine($"{particles[i].vx}");
-                }*/
             }
 
-            Console.WriteLine(systemMomentum);
+            //Console.WriteLine(systemMomentum);
         }
 
-        public string GPUattract
-        {
-            get
-            {
-                return @"
-                kernel void Attract(global float * input_X, int size_X, float G, global float * output_Z)
-                {
-    
-                    int i = get_global_id(0);
-
-                    //printf(""o: %0.20f\t%0.20f\n"", input_X[i * 2], input_X[i * 2 + 1]);
-                    
-                    float xi = input_X[i * 5];
-                    float yi = input_X[i * 5 + 1];
-
-                    float sumX = 0, sumY = 0;
-
-                    for (int j = 0; j < size_X; j++)
-                    {
-                        if (i == j)
-                        {
-                            continue;
-                        }
-            
-                        float distanceX = input_X[j * 5] - xi;
-                        float distanceY = input_X[j * 5 + 1] - yi;
-            
-                        float dist = sqrt(distanceX * distanceX + distanceY * distanceY);
-            
-                        float b = G * input_X[j * 5 + 4] / (dist + 0.00001);
-                        //printf(""%0.20f\t%0.20f\t%0.20f\n"", G, input_X[j * 5 + 4], (dist + 0.00001));
-                        sumX += distanceX * b;
-                        sumY += distanceY * b;
-            
-            
-                    }
-
-                    output_Z[i * 2] += input_X[i * 5 + 2] + sumX;
-                    output_Z[i * 2 + 1] += input_X[i * 5 + 3] + sumY;
-
-                    //printf(""%lf\n"", (double)input_X[index]);
-                    //printf(""%d\n"", i);
-                    //printf(""%d\n"", size_X);
-                    /*
-                    if ((float)i == (float)(size_X - 1))
-                    {
-                        #define fmt ""%s\n""
-                        printf(""%d\n"", i);
-                        printf(""G: %0.10f\n"", G);
-                        //output_Z[i] = 6.4;
-                        for (int i = 0; i < size_X * 2; i++)
-                        {
-                            printf(""%0.38f\n"", output_Z[i]);
-                        }
-                    }*/
-                }";
-            }
-        }
 
         public void Attract()
         {
@@ -136,9 +87,10 @@ namespace OPENCL_n_body
 
                     double distanceX = particles[j].x - particles[i].x;
                     double distanceY = particles[j].y - particles[i].y;
-                    double dist = Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
+                    double x2_y2 = distanceX * distanceX + distanceY * distanceY;// 3/2root(x)
+                    double dist = Math.Sqrt(x2_y2 * x2_y2 * x2_y2);
 
-                    double b = G * particles[j].mass / (dist + 0.000000001);
+                    double b = G * particles[j].mass / (dist + 0.000001);
 
                     sumX += distanceX * b;
                     sumY += distanceY * b;
@@ -159,10 +111,10 @@ namespace OPENCL_n_body
                     //Console.WriteLine($"{i}\t{j}");
                     double distanceX = particles[j].x - particles[i].x;
                     double distanceY = particles[j].y - particles[i].y;
-                    double dist = Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
-                    //double dist = distanceX * distanceX + distanceY * distanceY;
+                    double x2_y2 = distanceX * distanceX + distanceY * distanceY;
+                    double dist = Math.Sqrt(x2_y2 * x2_y2 * x2_y2);
 
-                    double b = G / (dist + 0.00001);
+                    double b = G / (dist + 0.000001);
 
                     double Ai = particles[j].mass * b;
                     double Aj = particles[i].mass * b;
@@ -182,28 +134,7 @@ namespace OPENCL_n_body
             });
         }
 
-        public void CPUAttract(float[] input_X, int size_X, float G1, float[] output_Z)
-        {
-            Parallel.For(0, size_X, i =>
-            {
-                for (int j = 0; j < size_X; j++)
-                {
-                    if (i == j)
-                        continue;
-
-                    float distanceX = input_X[j * 5] - input_X[i * 5];
-                    float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
-                    float dist = (float)Math.Pow(distanceX * distanceX + distanceY * distanceY, 1.5);
-
-                    float b = G1 * input_X[j * 5 + 4] / (dist + 0.001f);
-
-                    output_Z[i * 2] += distanceX * b;
-                    output_Z[i * 2 + 1] += distanceY * b;
-                }
-            });
-        }
-
-        public void Attract4()
+        public void Attract3()
         {
             //Parallel.For(0, particles.Length, i =>
             for (int i = 0; i < particles.Length; i++)
@@ -236,6 +167,28 @@ namespace OPENCL_n_body
                 particles[i].vx += sumX / particles[i].mass;
                 particles[i].vy += sumY / particles[i].mass;
             }//);
+        }
+
+        public void CPUAttract(float[] input_X, int size_X, float G1, float[] output_Z)
+        {
+            Parallel.For(0, size_X, i =>
+            {
+                for (int j = 0; j < size_X; j++)
+                {
+                    if (i == j)
+                        continue;
+
+                    float distanceX = input_X[j * 5] - input_X[i * 5];
+                    float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
+                    float x2_y2 = distanceX * distanceX + distanceY * distanceY;
+                    float dist = (float)Math.Sqrt(x2_y2 * x2_y2 * x2_y2);
+
+                    float b = G1 * input_X[j * 5 + 4] / (dist + 0.000001f);
+
+                    output_Z[i * 2] += distanceX * b;
+                    output_Z[i * 2 + 1] += distanceY * b;
+                }
+            });
         }
     }
 }

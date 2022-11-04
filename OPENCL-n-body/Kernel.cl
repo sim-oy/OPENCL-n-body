@@ -39,9 +39,10 @@ kernel void Attract(global float * input_X, int size_X, float G, global float * 
 
     float distanceX = input_X[j * 5] - input_X[i * 5];
     float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
-    float dist = pow(distanceX * distanceX + distanceY * distanceY, 1.5f);
+    float x2_y2 = distanceX * distanceX + distanceY * distanceY;
+    float dist = sqrt(x2_y2 * x2_y2 * x2_y2);
 
-    float b = G * input_X[j * 5 + 4] / (dist + 0.000000001);
+    float b = G * input_X[j * 5 + 4] / (dist + 0.000001f);
     //printf(""%0.20f\t%0.20f\t%0.20f\n"", G, input_X[j * 5 + 4], (dist + 0.000000001));
        
     output_Z[i * 2] += distanceX * b;
