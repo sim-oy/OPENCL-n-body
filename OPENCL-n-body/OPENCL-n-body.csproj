@@ -16,15 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Cloo">
-      <HintPath>..\Release\Cloo.dll</HintPath>
-    </Reference>
-    <Reference Include="OpenCLlib">
-      <HintPath>..\Release\OpenCLlib.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="Kernel.cl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

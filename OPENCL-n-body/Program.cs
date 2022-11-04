@@ -4,10 +4,7 @@ using System.Security.Policy;
 using SFML.Window;
 using SFML.Graphics;
 using SFML.System;
-using OpenCL;
 using System.Threading.Tasks;
-using Cloo;
-using Cloo.Bindings;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -46,10 +43,7 @@ namespace OPENCL_n_body
 
             try
             {
-                if (AcceleratorDevice.HasGPU)
-                {
-                    GPU.Init(env);
-                }
+                GPU.Init(env);
             }
             catch (Exception ex)
             {

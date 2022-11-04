@@ -5,11 +5,11 @@ kernel void Attract(global float * input_X, int size_X, float G, global float * 
 
     int i = get_global_id(0);
     int j = get_global_id(1);
-    if (i == 39485 && j == 8365) {
+    //if (i == 39485 && j == 8365) {
         //printf("%d, %d\n", i, j);
-        //printf("%d %d\n", get_work_dim(), get_local_linear_id());
-    }
-    printf("%d %d\n", get_work_dim(), get_global_size(3939393939));
+       //printf("%d %d\n", get_work_dim(), get_global_size(123123123123));
+    //}
+    //printf("%d %d\n", get_work_dim(), get_global_size(3939393939));
 
     //printf("o: %d\t %d\n", i, j);
 

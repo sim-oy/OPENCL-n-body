@@ -1,28 +1,23 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
-using Cloo;
-using SFML.Window;
 using OpenTK.Compute.OpenCL;
 
 namespace OPENCL_n_body
 {
     class GPU
     {
-        private static ComputeContext context;
-        private static ComputeProgram program;
-        private static ComputeKernel kernel;
-        private static ComputeCommandQueue queue;
-        private static ComputeEventList eventList;
+
+        private static CLContext context;
+        private static CLProgram program;
+        private static CLKernel kernel;
+        private static CLCommandQueue queue;
 
         private static float[] input_X;
         private static float[] output_Z;
 
-        private static ComputeBuffer<float> a;
-        private static ComputeBuffer<float> z;
+        private static CLBuffer a;
+        private static CLBuffer z;
 
 
         public static void Init(Environment env)
@@ -34,28 +29,40 @@ namespace OPENCL_n_body
             string sourceName = @"./Kernel.cl";
             string clProgramSource = File.ReadAllText(sourceName);
 
-            ComputePlatform platform = ComputePlatform.Platforms[0];
+            CLPlatform[] platforms = { };
+            CL.GetPlatformIds(out platforms);
+            CLPlatform platform = platforms[0];
 
-            ComputeContextPropertyList properties = new ComputeContextPropertyList(platform);
-            context = new ComputeContext(platform.Devices, properties, null, IntPtr.Zero);
+            //CLContextPropertyList properties = new ComputeContextPropertyList(platform);
+            CLDevice[] devices;
+            CL.GetDeviceIds(platform, DeviceType.Gpu, out devices);
 
-            ComputeDevice computer = platform.Devices[0];
+            CLResultCode resultCode;
+            context = CL.CreateContext(IntPtr.Zero, devices, IntPtr.Zero, IntPtr.Zero, out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create context failed");
 
-            program = new ComputeProgram(context, clProgramSource);
+
+            CLDevice computer = devices[0];
+
+            program = CL.CreateProgramWithSource(context, clProgramSource, out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create program failed");
             try
             {
-                program.Build(platform.Devices, null, null, IntPtr.Zero);
+                resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "", IntPtr.Zero, IntPtr.Zero);
+                if (resultCode != CLResultCode.Success) Console.WriteLine("Build failed", resultCode);
             }
             catch
             {
-                string buildLog = program.GetBuildLog(computer);
+                string buildLog = "you failed big time. OOF.";//program.GetBuildLog(computer);
                 Console.WriteLine($"Build log:\n{buildLog}");
             }
 
-            kernel = program.CreateKernel("Attract");
+            kernel = CL.CreateKernel(program, "Attract", out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel failed");
 
-            queue = new ComputeCommandQueue(context, context.Devices[0], ComputeCommandQueueFlags.None);
-            eventList = new ComputeEventList();
+            queue = CL.CreateCommandQueueWithProperties(context, computer, IntPtr.Zero, out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create command queue failed");
+
 
             input_X = new float[env.particles.Length * 5];
             int i = 0;
@@ -71,13 +78,19 @@ namespace OPENCL_n_body
             }
             output_Z = new float[env.particles.Length * 2];
 
-            a = new ComputeBuffer<float>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, input_X);
-            z = new ComputeBuffer<float>(context, ComputeMemoryFlags.WriteOnly | ComputeMemoryFlags.CopyHostPointer, output_Z);
+            a = CL.CreateBuffer(context, MemoryFlags.ReadOnly | MemoryFlags.CopyHostPtr, input_X, out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
+            z = CL.CreateBuffer(context, MemoryFlags.WriteOnly | MemoryFlags.CopyHostPtr, output_Z, out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {z} failed");
 
-            kernel.SetMemoryArgument(0, a);
-            kernel.SetValueArgument(1, size_X);
-            kernel.SetValueArgument(2, (float)Environment.G);
-            kernel.SetMemoryArgument(3, z);
+            resultCode = CL.SetKernelArg(kernel, 0, a);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
+            resultCode = CL.SetKernelArg(kernel, 1, size_X);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {size_X} failed");
+            resultCode = CL.SetKernelArg(kernel, 2, (float)Environment.G);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
+            resultCode = CL.SetKernelArg(kernel, 3, z);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {z} failed");
 
             //Console.WriteLine("Stopped run on GPU\n");
         }
@@ -99,18 +112,27 @@ namespace OPENCL_n_body
 
             output_Z = new float[env.particles.Length * 2];
 
-            queue.WriteToBuffer<float>(input_X, a, false, eventList);
-            queue.WriteToBuffer<float>(output_Z, z, false, eventList);
+            CLResultCode resultCode;
+            CLEvent evnt;// = CL.CreateUserEvent(context, out resultCode);
+            //if (resultCode != CLResultCode.Success) Console.WriteLine("Create event failed");
 
+            resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
+            resultCode = CL.EnqueueWriteBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {z} failed");
+            
             //Stopwatch sw1 = new Stopwatch();
             //sw1.Start();
             Func<int, int> roundup = x => x % 1024 == 0 ? x : (x - x % 1024) + 1024;
-            queue.Execute(kernel, null, new long[] { 16,16 }, new long[] { 4,4}, eventList);
-            queue.ReadFromBuffer(z, ref output_Z, false, eventList);
-
+            resultCode = CL.EnqueueNDRangeKernel(queue, kernel, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
+                                    (UIntPtr)roundup(env.particles.Length) }, null, 0, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel failed");
+            resultCode = CL.EnqueueReadBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque read buffer {z} failed");
             //sw1.Stop();
             //Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
-            queue.Finish();
+            resultCode = CL.Finish(queue);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Finish failed");
 
             int j = 0;
             foreach (Particle particle in env.particles)
@@ -120,7 +142,6 @@ namespace OPENCL_n_body
                 j += 2;
             }
 
-            eventList.Clear();
         }
 
         public static void RunCPUasGPU(Environment env)
