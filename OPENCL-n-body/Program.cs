@@ -26,7 +26,7 @@ namespace OPENCL_n_body
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(50000);
+            Environment env = new Environment(100000);
             //env.Environment4();
 
 

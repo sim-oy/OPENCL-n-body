@@ -19,6 +19,8 @@ namespace OPENCL_n_body
         private static CLBuffer a;
         private static CLBuffer z;
 
+        private const int blockRoundUpSize = 128;
+
 
         public static void Init(Environment env)
         {
@@ -41,11 +43,11 @@ namespace OPENCL_n_body
             context = CL.CreateContext(IntPtr.Zero, devices, IntPtr.Zero, IntPtr.Zero, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create context failed");
 
-
             CLDevice computer = devices[0];
 
             program = CL.CreateProgramWithSource(context, clProgramSource, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create program failed");
+
             try
             {
                 resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "", IntPtr.Zero, IntPtr.Zero);
@@ -65,17 +67,6 @@ namespace OPENCL_n_body
 
 
             input_X = new float[env.particles.Length * 5];
-            int i = 0;
-            foreach (Particle particle in env.particles)
-            {
-                input_X[i + 0] = (float)particle.x;
-                input_X[i + 1] = (float)particle.y;
-                input_X[i + 2] = (float)particle.vx;
-                input_X[i + 3] = (float)particle.vy;
-                input_X[i + 4] = (float)particle.mass;
-
-                i += 5;
-            }
             output_Z = new float[env.particles.Length * 2];
 
             a = CL.CreateBuffer(context, MemoryFlags.ReadOnly | MemoryFlags.CopyHostPtr, input_X, out resultCode);
@@ -121,16 +112,25 @@ namespace OPENCL_n_body
             resultCode = CL.EnqueueWriteBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {z} failed");
             
+
             //Stopwatch sw1 = new Stopwatch();
             //sw1.Start();
-            Func<int, int> roundup = x => x % 1024 == 0 ? x : (x - x % 1024) + 1024;
+            
+            
+            Func<int, int> roundup = x => x % blockRoundUpSize == 0 ? x : (x - x % blockRoundUpSize) + blockRoundUpSize;
+            /*resultCode = CL.EnqueueNDRangeKernel(queue, kernel, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
+                                    (UIntPtr)roundup(env.particles.Length) }, null, 0, null, out evnt);*/
             resultCode = CL.EnqueueNDRangeKernel(queue, kernel, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
-                                    (UIntPtr)roundup(env.particles.Length) }, null, 0, null, out evnt);
+                                    (UIntPtr)roundup(env.particles.Length) }, new UIntPtr[] { (UIntPtr)128, (UIntPtr)8 }, 0, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel failed");
+            
+
             resultCode = CL.EnqueueReadBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque read buffer {z} failed");
+            
             //sw1.Stop();
             //Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
+
             resultCode = CL.Finish(queue);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Finish failed");
 
@@ -143,6 +143,8 @@ namespace OPENCL_n_body
             }
 
         }
+
+
 
         public static void RunCPUasGPU(Environment env)
         {

@@ -14,7 +14,7 @@ namespace OPENCL_n_body
 
         public Environment(int particleAmount)
         {
-            particles = new Particle[particleAmount + 1];
+            particles = new Particle[particleAmount];
 
             Random rng = new Random(0);
 
@@ -23,7 +23,7 @@ namespace OPENCL_n_body
                 particles[i] = new Particle(rng.NextDouble(), rng.NextDouble(), 0, 0, rng.NextDouble());
             }
 
-            particles[particleAmount] = new Particle(0.5, 0.5, 0, 0, 500);
+            //particles[particleAmount] = new Particle(0.5, 0.5, 0, 0, 500);
         }
 
         public void Environment2()
