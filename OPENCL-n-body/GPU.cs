@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.WebSockets;
 using OpenTK.Compute.OpenCL;
 
 namespace OPENCL_n_body
@@ -14,6 +16,8 @@ namespace OPENCL_n_body
         private static CLKernel kernel1;
         private static CLKernel kernel2;
         private static CLCommandQueue queue;
+        private static CLResultCode resultCode;
+        private static CLEvent evnt;
 
         private static float[] input_X;
 
@@ -39,7 +43,6 @@ namespace OPENCL_n_body
             CLDevice[] devices;
             CL.GetDeviceIds(platform, DeviceType.Gpu, out devices);
 
-            CLResultCode resultCode;
             context = CL.CreateContext(IntPtr.Zero, devices, IntPtr.Zero, IntPtr.Zero, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create context failed");
 
@@ -51,13 +54,16 @@ namespace OPENCL_n_body
 
             program = CL.CreateProgramWithSource(context, clProgramSource, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create program failed");
-            Console.WriteLine("Create program failed");
 
             resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "", IntPtr.Zero, IntPtr.Zero);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Build failed1", resultCode);
-
-
-            CL.GetProgramBuildInfo(program, devices, );
+            if (resultCode != CLResultCode.Success) 
+            {
+                Console.WriteLine("Build failed1", resultCode);
+                byte[] result;
+                resultCode = CL.GetProgramBuildInfo(program, computer, ProgramBuildInfo.Log, out result);
+                if (resultCode != CLResultCode.Success) Console.WriteLine("Build log failed", resultCode);
+                Console.WriteLine(System.Text.Encoding.Default.GetString(result));
+            }
 
             kernel1 = CL.CreateKernel(program, "Attract", out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel1 failed");
@@ -89,13 +95,15 @@ namespace OPENCL_n_body
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
             resultCode = CL.SetKernelArg(kernel1, 1, (float)Environment.G);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
-            /*
+            
             resultCode = CL.SetKernelArg(kernel2, 0, a);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
-            */
+            
 
+            // = CL.CreateUserEvent(context, out resultCode);
+            //if (resultCode != CLResultCode.Success) Console.WriteLine("Create event failed");
 
-            //Console.WriteLine("Stopped run on GPU\n");
+            
         }
 
         public static void Run(Environment env)
@@ -112,19 +120,12 @@ namespace OPENCL_n_body
 
                 i += 5;
             }
-
-
-            CLResultCode resultCode;
-            CLEvent evnt;// = CL.CreateUserEvent(context, out resultCode);
-            //if (resultCode != CLResultCode.Success) Console.WriteLine("Create event failed");
-
+            /*
             resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
-            
-
+            */
             //Stopwatch sw1 = new Stopwatch(); sw1.Start();
-            
-            
+
             Func<int, int> roundup = x => x % blockRoundUpSize == 0 ? x : (x - x % blockRoundUpSize) + blockRoundUpSize;
 
             resultCode = CL.EnqueueNDRangeKernel(queue, kernel1, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
@@ -135,12 +136,11 @@ namespace OPENCL_n_body
                                     (UIntPtr)1, (UIntPtr)1 }, null, 0, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel2 failed");
 
-
             resultCode = CL.EnqueueReadBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque read buffer {z} failed");
             
             //sw1.Stop(); Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
-
+            CL.buffer
             resultCode = CL.Finish(queue);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Finish failed");
 
