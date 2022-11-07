@@ -8,7 +8,7 @@ namespace OPENCL_n_body
 {
     class Environment
     {
-        public const double G = 0.00000001;
+        public const double G = 0.0000000001;
 
         public Particle[] particles;
 
@@ -20,7 +20,7 @@ namespace OPENCL_n_body
 
             for (int i = 0; i < particleAmount; i++)
             {
-                particles[i] = new Particle(rng.NextDouble(), rng.NextDouble(), 0, 0, rng.NextDouble());
+                particles[i] = new Particle(rng.NextDouble() * 0.2 + 0.4, rng.NextDouble() * 0.2 + 0.4, 0, 0, rng.NextDouble());
             }
 
             //particles[particleAmount] = new Particle(0.5, 0.5, 0, 0, 500);
@@ -67,10 +67,13 @@ namespace OPENCL_n_body
             double systemMomentum = 0;
             for (int i = 0; i < particles.Length; i++)
             {
+                Console.WriteLine($"{i}: {particles[i].vx}, {particles[i].vx}");
+
                 particles[i].Move();
                 systemMomentum += particles[i].vx + particles[i].vy;
             }
-
+            //particles[particles.Length - 1].x = 0.5;
+            //particles[particles.Length - 1].y = 0.5;
             //Console.WriteLine(systemMomentum);
         }
 
@@ -169,8 +172,9 @@ namespace OPENCL_n_body
             }//);
         }
 
-        public void CPUAttract(float[] input_X, int size_X, float G1, float[] output_Z)
+        public void CPURun(float[] input_X, int size_X, float G1)
         {
+            //for (int i = 0; i < size_X; i++)
             Parallel.For(0, size_X, i =>
             {
                 for (int j = 0; j < size_X; j++)
@@ -181,14 +185,27 @@ namespace OPENCL_n_body
                     float distanceX = input_X[j * 5] - input_X[i * 5];
                     float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
                     float x2_y2 = distanceX * distanceX + distanceY * distanceY;
-                    float dist = (float)Math.Sqrt(x2_y2 * x2_y2 * x2_y2);
+
+                    float dist = (float)Math.Sqrt(x2_y2 * x2_y2);
+                    //float dist = x2_y2 * x2_y2;
+                    //if (i == 0 && j == 1)
+                    //    Console.WriteLine($"{x2_y2:0.0000000000000000000000000000}");
 
                     float b = G1 * input_X[j * 5 + 4] / (dist + 0.000001f);
 
-                    output_Z[i * 2] += distanceX * b;
-                    output_Z[i * 2 + 1] += distanceY * b;
+                    input_X[i * 5 + 2] += distanceX * b;
+                    input_X[i * 5 + 3] += distanceY * b;
                 }
             });
+
+            for (int i = 0; i < size_X; i++)
+            {
+                float vx = input_X[i * 5 + 2];
+                float vy = input_X[i * 5 + 3];
+
+                input_X[i * 5] += vx;
+                input_X[i * 5 + 1] += vy;
+            }
         }
     }
 }

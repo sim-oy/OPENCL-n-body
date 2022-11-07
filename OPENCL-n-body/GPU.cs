@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using OpenTK.Compute.OpenCL;
 
@@ -10,16 +11,15 @@ namespace OPENCL_n_body
 
         private static CLContext context;
         private static CLProgram program;
-        private static CLKernel kernel;
+        private static CLKernel kernel1;
+        private static CLKernel kernel2;
         private static CLCommandQueue queue;
 
         private static float[] input_X;
-        private static float[] output_Z;
 
         private static CLBuffer a;
-        private static CLBuffer z;
 
-        private const int blockRoundUpSize = 128;
+        private const int blockRoundUpSize = 32;
 
 
         public static void Init(Environment env)
@@ -45,43 +45,55 @@ namespace OPENCL_n_body
 
             CLDevice computer = devices[0];
 
+            byte[] sizes = new byte[3*8];
+            CL.GetDeviceInfo(computer, DeviceInfo.MaximumWorkItemSizes, out sizes);
+            Console.WriteLine($"{BitConverter.ToUInt64(sizes, 0)} {BitConverter.ToUInt64(sizes, 8)}, {BitConverter.ToUInt64(sizes, 16)}");
+
             program = CL.CreateProgramWithSource(context, clProgramSource, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create program failed");
+            Console.WriteLine("Create program failed");
 
-            try
-            {
-                resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "", IntPtr.Zero, IntPtr.Zero);
-                if (resultCode != CLResultCode.Success) Console.WriteLine("Build failed", resultCode);
-            }
-            catch
-            {
-                string buildLog = "you failed big time. OOF.";//program.GetBuildLog(computer);
-                Console.WriteLine($"Build log:\n{buildLog}");
-            }
+            resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "", IntPtr.Zero, IntPtr.Zero);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Build failed1", resultCode);
 
-            kernel = CL.CreateKernel(program, "Attract", out resultCode);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel failed");
+
+            CL.GetProgramBuildInfo(program, devices, );
+
+            kernel1 = CL.CreateKernel(program, "Attract", out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel1 failed");
+
+            kernel2 = CL.CreateKernel(program, "Move", out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel2 failed");
+
+
+            CL.GetKernelWorkGroupInfo(kernel1, computer, KernelWorkGroupInfo.WorkGroupSize, out sizes);
+            Console.WriteLine($"k1 {BitConverter.ToUInt64(sizes, 0)}");
+            CL.GetKernelWorkGroupInfo(kernel1, computer, KernelWorkGroupInfo.PreferredWorkGroupSizeMultiple, out sizes);
+            Console.WriteLine($"k1 {BitConverter.ToUInt64(sizes, 0)}");
+
+            CL.GetKernelWorkGroupInfo(kernel2, computer, KernelWorkGroupInfo.WorkGroupSize, out sizes);
+            Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
+            CL.GetKernelWorkGroupInfo(kernel2, computer, KernelWorkGroupInfo.PreferredWorkGroupSizeMultiple, out sizes);
+            Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
 
             queue = CL.CreateCommandQueueWithProperties(context, computer, IntPtr.Zero, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create command queue failed");
 
 
             input_X = new float[env.particles.Length * 5];
-            output_Z = new float[env.particles.Length * 2];
 
-            a = CL.CreateBuffer(context, MemoryFlags.ReadOnly | MemoryFlags.CopyHostPtr, input_X, out resultCode);
+            a = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, input_X, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
-            z = CL.CreateBuffer(context, MemoryFlags.WriteOnly | MemoryFlags.CopyHostPtr, output_Z, out resultCode);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {z} failed");
 
-            resultCode = CL.SetKernelArg(kernel, 0, a);
+            resultCode = CL.SetKernelArg(kernel1, 0, a);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
-            resultCode = CL.SetKernelArg(kernel, 1, size_X);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {size_X} failed");
-            resultCode = CL.SetKernelArg(kernel, 2, (float)Environment.G);
+            resultCode = CL.SetKernelArg(kernel1, 1, (float)Environment.G);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
-            resultCode = CL.SetKernelArg(kernel, 3, z);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {z} failed");
+            /*
+            resultCode = CL.SetKernelArg(kernel2, 0, a);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
+            */
+
 
             //Console.WriteLine("Stopped run on GPU\n");
         }
@@ -101,7 +113,6 @@ namespace OPENCL_n_body
                 i += 5;
             }
 
-            output_Z = new float[env.particles.Length * 2];
 
             CLResultCode resultCode;
             CLEvent evnt;// = CL.CreateUserEvent(context, out resultCode);
@@ -109,27 +120,26 @@ namespace OPENCL_n_body
 
             resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
-            resultCode = CL.EnqueueWriteBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {z} failed");
             
 
-            //Stopwatch sw1 = new Stopwatch();
-            //sw1.Start();
+            //Stopwatch sw1 = new Stopwatch(); sw1.Start();
             
             
             Func<int, int> roundup = x => x % blockRoundUpSize == 0 ? x : (x - x % blockRoundUpSize) + blockRoundUpSize;
-            /*resultCode = CL.EnqueueNDRangeKernel(queue, kernel, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
-                                    (UIntPtr)roundup(env.particles.Length) }, null, 0, null, out evnt);*/
-            resultCode = CL.EnqueueNDRangeKernel(queue, kernel, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
-                                    (UIntPtr)roundup(env.particles.Length) }, new UIntPtr[] { (UIntPtr)128, (UIntPtr)8 }, 0, null, out evnt);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel failed");
-            
 
-            resultCode = CL.EnqueueReadBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
+            resultCode = CL.EnqueueNDRangeKernel(queue, kernel1, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
+                                    (UIntPtr)roundup(env.particles.Length), (UIntPtr)1 }, new UIntPtr[] { (UIntPtr)32, (UIntPtr)8, (UIntPtr)1 }, 0, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel1 failed");
+
+            resultCode = CL.EnqueueNDRangeKernel(queue, kernel2, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
+                                    (UIntPtr)1, (UIntPtr)1 }, null, 0, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel2 failed");
+
+
+            resultCode = CL.EnqueueReadBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque read buffer {z} failed");
             
-            //sw1.Stop();
-            //Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
+            //sw1.Stop(); Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
 
             resultCode = CL.Finish(queue);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Finish failed");
@@ -137,9 +147,12 @@ namespace OPENCL_n_body
             int j = 0;
             foreach (Particle particle in env.particles)
             {
-                particle.vx += (double)output_Z[j];
-                particle.vy += (double)output_Z[j + 1];
-                j += 2;
+                particle.x = (double)input_X[j];
+                particle.y = (double)input_X[j + 1];
+                particle.vx = (double)input_X[j + 2];
+                particle.vy = (double)input_X[j + 3];
+
+                j += 5;
             }
 
         }
@@ -161,22 +174,20 @@ namespace OPENCL_n_body
                 i += 5;
             }
 
-            output_Z = new float[env.particles.Length * 2];
-
             //Stopwatch sw1 = new Stopwatch();
             //sw1.Start();
-
-            env.CPUAttract(input_X, env.particles.Length, (float)Environment.G, output_Z);
-
+            env.CPURun(input_X, env.particles.Length, (float)Environment.G);
             //sw1.Stop();
             //Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
 
             int j = 0;
             foreach (Particle particle in env.particles)
             {
-                particle.vx += (double)output_Z[j];
-                particle.vy += (double)output_Z[j + 1];
-                j += 2;
+                particle.x = (double)input_X[j];
+                particle.y = (double)input_X[j + 1];
+                particle.vx = (double)input_X[j + 2];
+                particle.vy = (double)input_X[j + 3];
+                j += 5;
             }
 
         }

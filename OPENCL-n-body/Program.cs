@@ -16,8 +16,9 @@ namespace OPENCL_n_body
     class Program
     {
 
-        const int WINDOW_WIDTH = 500;
-        const int WINDOW_HEIGHT = 500;
+        const int WINDOW_WIDTH = 700;
+        const int WINDOW_HEIGHT = 700;
+        const int NUM_PARTICLES = 60000;
 
         private static RenderWindow window;
         private static byte[] windowBuffer;
@@ -26,7 +27,8 @@ namespace OPENCL_n_body
         {
             Console.WriteLine("start");
 
-            Environment env = new Environment(100000);
+            Func<int, int> roundup = x => x % 32 == 0 ? x : (x - x % 32) + 32;
+            Environment env = new Environment(roundup(NUM_PARTICLES));
             //env.Environment4();
 
 
@@ -41,14 +43,7 @@ namespace OPENCL_n_body
             
             long[] avg_time = new long[100];
 
-            try
-            {
-                GPU.Init(env);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+            GPU.Init(env);
             Console.WriteLine("Init");
 
             while (window.IsOpen)
@@ -59,10 +54,13 @@ namespace OPENCL_n_body
                 sw1.Start();
                 sw2.Start();
 
-                //env.Attract2();
+                
                 GPU.Run(env);
+                
+                //env.Attract2();
                 //GPU.RunCPUasGPU(env);
-                env.Move();
+
+                //env.Move();
 
                 sw1.Stop();
                 long calctime = sw1.ElapsedMilliseconds;
@@ -93,7 +91,7 @@ namespace OPENCL_n_body
                 $"fps: {Math.Round(1.0 / ((double)sw2.ElapsedMilliseconds / 1000.0), 2)}\n"
                 );
                 
-                //Thread.Sleep(1);
+                //Thread.Sleep(100);
             }
         }
 
