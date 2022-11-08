@@ -15,6 +15,7 @@ namespace OPENCL_n_body
         private static CLProgram program;
         private static CLKernel kernel1;
         private static CLKernel kernel2;
+        private static CLKernel kernel3;
         private static CLCommandQueue queue;
         private static CLResultCode resultCode;
         private static CLEvent evnt;
@@ -71,6 +72,9 @@ namespace OPENCL_n_body
             kernel2 = CL.CreateKernel(program, "Move", out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel2 failed");
 
+            kernel3 = CL.CreateKernel(program, "Move", out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel2 failed");
+
 
             CL.GetKernelWorkGroupInfo(kernel1, computer, KernelWorkGroupInfo.WorkGroupSize, out sizes);
             Console.WriteLine($"k1 {BitConverter.ToUInt64(sizes, 0)}");
@@ -82,6 +86,11 @@ namespace OPENCL_n_body
             CL.GetKernelWorkGroupInfo(kernel2, computer, KernelWorkGroupInfo.PreferredWorkGroupSizeMultiple, out sizes);
             Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
 
+            CL.GetKernelWorkGroupInfo(kernel3, computer, KernelWorkGroupInfo.WorkGroupSize, out sizes);
+            Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
+            CL.GetKernelWorkGroupInfo(kernel3, computer, KernelWorkGroupInfo.PreferredWorkGroupSizeMultiple, out sizes);
+            Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
+
             queue = CL.CreateCommandQueueWithProperties(context, computer, IntPtr.Zero, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create command queue failed");
 
@@ -91,6 +100,11 @@ namespace OPENCL_n_body
             a = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, input_X, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
 
+            resultCode = CL.SetKernelArg(kernel3, 0, a);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
+            resultCode = CL.SetKernelArg(kernel3, 1, (float)Environment.G);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
+            /*
             resultCode = CL.SetKernelArg(kernel1, 0, a);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
             resultCode = CL.SetKernelArg(kernel1, 1, (float)Environment.G);
@@ -98,12 +112,13 @@ namespace OPENCL_n_body
             
             resultCode = CL.SetKernelArg(kernel2, 0, a);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
-            
+            */
             //CL.
             // = CL.CreateUserEvent(context, out resultCode);
             //if (resultCode != CLResultCode.Success) Console.WriteLine("Create event failed");
 
-            
+            resultCode = CL.EnqueueNDRangeKernel(queue, kernel3, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)1,
+                                    (UIntPtr)1, (UIntPtr)1 }, null, 0, null, out evnt);
         }
 
         public static void Run(Environment env)
@@ -142,6 +157,8 @@ namespace OPENCL_n_body
             //sw1.Stop(); Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
             
             resultCode = CL.Finish(queue);
+            
+
             if (resultCode != CLResultCode.Success) Console.WriteLine("Finish failed");
 
             int j = 0;
@@ -154,7 +171,6 @@ namespace OPENCL_n_body
 
                 j += 5;
             }
-
         }
 
 
