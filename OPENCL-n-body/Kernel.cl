@@ -1,4 +1,5 @@
-﻿
+﻿__global int aa;
+
 inline void AtomicAdd(volatile __global float* source, const float operand) {
     union {
         unsigned int intVal;
@@ -20,6 +21,8 @@ kernel void Attract(global float * input_X, const float G)
     int i = get_global_id(0);
     int j = get_global_id(1);
 
+    aa = 94;
+
     float distanceX = input_X[j * 5] - input_X[i * 5];
     float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
     float x2_y2 = distanceX * distanceX + distanceY * distanceY;
@@ -33,6 +36,8 @@ kernel void Attract(global float * input_X, const float G)
 }
 
 kernel void Move(global float* input_X) {
+
+    printf("%d\n", aa);
 
     int i = get_global_id(0);
 

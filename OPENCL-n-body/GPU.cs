@@ -54,8 +54,8 @@ namespace OPENCL_n_body
 
             program = CL.CreateProgramWithSource(context, clProgramSource, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create program failed");
-
-            resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "", IntPtr.Zero, IntPtr.Zero);
+            //"-cl-std=CL2.0"   https://developer.arm.com/documentation/101574/0400/OpenCL-2-0/Program-scope-variables?lang=en
+            resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "-cl-std=CL2.0", IntPtr.Zero, IntPtr.Zero);
             if (resultCode != CLResultCode.Success) 
             {
                 Console.WriteLine("Build failed1", resultCode);
@@ -99,7 +99,7 @@ namespace OPENCL_n_body
             resultCode = CL.SetKernelArg(kernel2, 0, a);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
             
-
+            //CL.
             // = CL.CreateUserEvent(context, out resultCode);
             //if (resultCode != CLResultCode.Success) Console.WriteLine("Create event failed");
 
@@ -120,10 +120,10 @@ namespace OPENCL_n_body
 
                 i += 5;
             }
-            /*
+            
             resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
-            */
+            
             //Stopwatch sw1 = new Stopwatch(); sw1.Start();
 
             Func<int, int> roundup = x => x % blockRoundUpSize == 0 ? x : (x - x % blockRoundUpSize) + blockRoundUpSize;
@@ -140,7 +140,7 @@ namespace OPENCL_n_body
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque read buffer {z} failed");
             
             //sw1.Stop(); Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
-            CL.buffer
+            
             resultCode = CL.Finish(queue);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Finish failed");
 
