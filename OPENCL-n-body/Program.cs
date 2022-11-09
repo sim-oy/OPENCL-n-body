@@ -18,7 +18,7 @@ namespace OPENCL_n_body
 
         const int WINDOW_WIDTH = 500;
         const int WINDOW_HEIGHT = 500;
-        const int NUM_PARTICLES = 500;
+        const int NUM_PARTICLES = 100000;
 
         private static RenderWindow window;
         private static byte[] windowBuffer;

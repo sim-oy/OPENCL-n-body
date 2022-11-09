@@ -21,8 +21,10 @@ namespace OPENCL_n_body
         private static CLEvent evnt;
 
         private static float[] input_X;
+        private static float[] output_Z;
 
         private static CLBuffer a;
+        private static CLBuffer z;
 
         private const int blockRoundUpSize = 32;
 
@@ -55,7 +57,9 @@ namespace OPENCL_n_body
 
             program = CL.CreateProgramWithSource(context, clProgramSource, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create program failed");
+
             //"-cl-std=CL2.0"   https://developer.arm.com/documentation/101574/0400/OpenCL-2-0/Program-scope-variables?lang=en
+
             resultCode = CL.BuildProgram(program, (uint)devices.Length,devices, "-cl-std=CL2.0", IntPtr.Zero, IntPtr.Zero);
             if (resultCode != CLResultCode.Success) 
             {
@@ -72,7 +76,7 @@ namespace OPENCL_n_body
             kernel2 = CL.CreateKernel(program, "Move", out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel2 failed");
 
-            kernel3 = CL.CreateKernel(program, "Move", out resultCode);
+            kernel3 = CL.CreateKernel(program, "Init", out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create kernel2 failed");
 
 
@@ -86,60 +90,58 @@ namespace OPENCL_n_body
             CL.GetKernelWorkGroupInfo(kernel2, computer, KernelWorkGroupInfo.PreferredWorkGroupSizeMultiple, out sizes);
             Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
 
-            CL.GetKernelWorkGroupInfo(kernel3, computer, KernelWorkGroupInfo.WorkGroupSize, out sizes);
-            Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
-            CL.GetKernelWorkGroupInfo(kernel3, computer, KernelWorkGroupInfo.PreferredWorkGroupSizeMultiple, out sizes);
-            Console.WriteLine($"k2 {BitConverter.ToUInt64(sizes, 0)}");
-
             queue = CL.CreateCommandQueueWithProperties(context, computer, IntPtr.Zero, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create command queue failed");
 
 
-            input_X = new float[env.particles.Length * 5];
+            input_X = new float[env.particles.Length * 3];
+            output_Z = new float[env.particles.Length * 2];
 
             a = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, input_X, out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
+            z = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, output_Z, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
 
             resultCode = CL.SetKernelArg(kernel3, 0, a);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
-            resultCode = CL.SetKernelArg(kernel3, 1, (float)Environment.G);
+            resultCode = CL.SetKernelArg(kernel3, 1, z);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {z} failed");
+            resultCode = CL.SetKernelArg(kernel3, 2, (float)Environment.G);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
-            /*
-            resultCode = CL.SetKernelArg(kernel1, 0, a);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
-            resultCode = CL.SetKernelArg(kernel1, 1, (float)Environment.G);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
-            
-            resultCode = CL.SetKernelArg(kernel2, 0, a);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {a} failed");
-            */
-            //CL.
-            // = CL.CreateUserEvent(context, out resultCode);
-            //if (resultCode != CLResultCode.Success) Console.WriteLine("Create event failed");
+
+
+            int i = 0;
+            foreach (Particle particle in env.particles)
+            {
+                output_Z[i + 0] = (float)particle.x;
+                output_Z[i + 1] = (float)particle.y;
+                i += 2;
+            }
+            i = 0;
+            foreach (Particle particle in env.particles)
+            {
+                input_X[i + 0] = (float)particle.vx;
+                input_X[i + 1] = (float)particle.vy;
+                input_X[i + 2] = (float)particle.mass;
+                i += 3;
+            }
+
+            resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
+            resultCode = CL.EnqueueWriteBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
+
 
             resultCode = CL.EnqueueNDRangeKernel(queue, kernel3, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)1,
                                     (UIntPtr)1, (UIntPtr)1 }, null, 0, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel3 failed");
         }
 
         public static void Run(Environment env)
         {
-            input_X = new float[env.particles.Length * 5];
-            int i = 0;
-            foreach (Particle particle in env.particles)
-            {
-                input_X[i + 0] = (float)particle.x;
-                input_X[i + 1] = (float)particle.y;
-                input_X[i + 2] = (float)particle.vx;
-                input_X[i + 3] = (float)particle.vy;
-                input_X[i + 4] = (float)particle.mass;
-
-                i += 5;
-            }
-            
-            resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
             
             //Stopwatch sw1 = new Stopwatch(); sw1.Start();
+
 
             Func<int, int> roundup = x => x % blockRoundUpSize == 0 ? x : (x - x % blockRoundUpSize) + blockRoundUpSize;
 
@@ -151,25 +153,22 @@ namespace OPENCL_n_body
                                     (UIntPtr)1, (UIntPtr)1 }, null, 0, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel2 failed");
 
-            resultCode = CL.EnqueueReadBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
+            resultCode = CL.EnqueueReadBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque read buffer {z} failed");
-            
+
+
             //sw1.Stop(); Console.Write($"GPUcalc: {sw1.ElapsedMilliseconds}\n");
             
             resultCode = CL.Finish(queue);
-            
-
             if (resultCode != CLResultCode.Success) Console.WriteLine("Finish failed");
 
             int j = 0;
             foreach (Particle particle in env.particles)
             {
-                particle.x = (double)input_X[j];
-                particle.y = (double)input_X[j + 1];
-                particle.vx = (double)input_X[j + 2];
-                particle.vy = (double)input_X[j + 3];
+                particle.x = (double)output_Z[j];
+                particle.y = (double)output_Z[j + 1];
 
-                j += 5;
+                j += 2;
             }
         }
 

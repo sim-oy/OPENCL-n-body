@@ -67,7 +67,7 @@ namespace OPENCL_n_body
             double systemMomentum = 0;
             for (int i = 0; i < particles.Length; i++)
             {
-                Console.WriteLine($"{i}: {particles[i].vx}, {particles[i].vx}");
+                //Console.WriteLine($"{i}: {particles[i].vx}, {particles[i].vx}");
 
                 particles[i].Move();
                 systemMomentum += particles[i].vx + particles[i].vy;
@@ -198,6 +198,7 @@ namespace OPENCL_n_body
                 }
             });
 
+            //Move
             for (int i = 0; i < size_X; i++)
             {
                 float vx = input_X[i * 5 + 2];
