@@ -96,10 +96,13 @@ namespace OPENCL_n_body
 
             input_X = new float[env.particles.Length * 3];
             output_Z = new float[env.particles.Length * 2];
+            float[] fsums = new float[env.particles.Length * env.particles.Length * 2];
 
             a = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, input_X, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
             z = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, output_Z, out resultCode);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
+            CLBuffer b = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, fsums, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
 
             resultCode = CL.SetKernelArg(kernel3, 0, a);
@@ -108,6 +111,11 @@ namespace OPENCL_n_body
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {z} failed");
             resultCode = CL.SetKernelArg(kernel3, 2, (float)Environment.G);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
+            resultCode = CL.SetKernelArg(kernel3, 3, env.particles.Length);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {l} failed");
+
+            resultCode = CL.SetKernelArg(kernel3, 4, b);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {b} failed");
 
 
             int i = 0;

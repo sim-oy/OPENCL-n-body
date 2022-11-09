@@ -18,7 +18,7 @@ namespace OPENCL_n_body
 
         const int WINDOW_WIDTH = 500;
         const int WINDOW_HEIGHT = 500;
-        const int NUM_PARTICLES = 100000;
+        const int NUM_PARTICLES = 20000;
 
         private static RenderWindow window;
         private static byte[] windowBuffer;
@@ -54,11 +54,11 @@ namespace OPENCL_n_body
                 sw1.Start();
                 sw2.Start();
 
-                
+
                 GPU.Run(env);
-                
-                //env.Attract2();
                 //GPU.RunCPUasGPU(env);
+
+                //env.Attract2();
 
                 //env.Move();
 
