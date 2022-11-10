@@ -96,12 +96,14 @@ namespace OPENCL_n_body
 
             input_X = new float[env.particles.Length * 3];
             output_Z = new float[env.particles.Length * 2];
+
             float[] fsums = new float[env.particles.Length * env.particles.Length * 2];
 
             a = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, input_X, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
             z = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, output_Z, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
+
             CLBuffer b = CL.CreateBuffer(context, MemoryFlags.ReadWrite | MemoryFlags.CopyHostPtr, fsums, out resultCode);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create buffer {a} failed");
 
@@ -136,6 +138,7 @@ namespace OPENCL_n_body
 
             resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
+
             resultCode = CL.EnqueueWriteBuffer(queue, z, false, UIntPtr.Zero, output_Z, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
 
@@ -156,7 +159,11 @@ namespace OPENCL_n_body
             resultCode = CL.EnqueueNDRangeKernel(queue, kernel1, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
                                     (UIntPtr)roundup(env.particles.Length), (UIntPtr)1 }, new UIntPtr[] { (UIntPtr)32, (UIntPtr)8, (UIntPtr)1 }, 0, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel1 failed");
-
+            /*
+            resultCode = CL.EnqueueNDRangeKernel(queue, kernel1, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
+                                    (UIntPtr)1, (UIntPtr)1 }, new UIntPtr[] { (UIntPtr)32, (UIntPtr)8, (UIntPtr)1 }, 0, null, out evnt);
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel1 failed");
+            */
             resultCode = CL.EnqueueNDRangeKernel(queue, kernel2, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)roundup(env.particles.Length),
                                     (UIntPtr)1, (UIntPtr)1 }, null, 0, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel2 failed");
