@@ -3,7 +3,7 @@ __global float * output_W;
 __global float G1;
 __global int size_X;
 
-__global float * fSums;
+//__global float * fSums;
 
 inline void AtomicAdd(volatile __global float* source, const float operand) {
 	union {
@@ -35,24 +35,26 @@ inline void atomicAdd_g_f(volatile __global float* addr, float val)
 	} while (current.u32 != expected.u32);
 }
 
-kernel void Init(global float* input_X, global float* output_Z, const float G, const int size, global float * fsums)
+kernel void Init(global float* input_X, global float* output_Z, const float G, const int size/*, global float * fsums*/)
 {
 	input_A = input_X;
 	output_W = output_Z;
 	G1 = G;
 	size_X = size;
-	fSums = fsums;
+	//fSums = fsums;
 
 	printf("kernel variable Init\n");
 }
 
-kernel void Attract()
+kernel void Attract()//Attract2
 {
 	int i = get_global_id(0);
 	/*
 	if (i == 0) {
 		printf("%f\n", input_A[0]);
 	}*/
+
+	float sumXi = 0, sumYi = 0;
 
 	for (int j = i + 1; j < size_X; j++)
 	{
@@ -64,8 +66,8 @@ kernel void Attract()
 
 		float b = G1 / (dist + 0.000001f);
 
-		double Ai = particles[j].mass * b;
-		double Aj = particles[i].mass * b;
+		double Ai = input_A[j * 3 + 2] * b;
+		double Aj = input_A[i * 3 + 2] * b;
 
 		sumXi += distanceX * Ai;
 		sumYi += distanceY * Ai;
@@ -77,8 +79,8 @@ kernel void Attract()
 		input_A[j * 3 + 1] += -distanceY * Aj;
 	}
 	
-	input_A[i * 3] += sumXi;
-	input_A[i * 3 + 1] += sumYi;
+	input_A[i * 3] = sumXi;
+	input_A[i * 3 + 1] = sumYi;
 
 	//input_A[i * 3] += distanceX * b;
 	//input_A[i * 3 + 1] += distanceY * b;
@@ -91,13 +93,13 @@ kernel void Move()
 	/*if (i == 0){
 		printf("%f\n", input_A[0]);
 	}*/
-	
+	/*
 	for (int j = 0; j < size_X; j++) 
 	{
 		input_A[i * 3] += fSums[(j * size_X + i) * 2];
 		input_A[i * 3 + 1] += fSums[(j * size_X + i) * 2 + 1];
 	}
-
+	*/
 	float vx = input_A[i * 3];
 	float vy = input_A[i * 3 + 1];
 
@@ -132,3 +134,4 @@ kernel void Attract(global float* input_X, const float G)
 	AtomicAdd(&input_X[i * 5 + 3], distanceY * b);
 }
 */
+
