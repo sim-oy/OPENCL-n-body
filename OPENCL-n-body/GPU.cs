@@ -20,8 +20,8 @@ namespace OPENCL_n_body
         private static CLResultCode resultCode;
         private static CLEvent evnt;
 
-        private static float[] input_X;
-        private static float[] output_Z;
+        private static float[,] input_X;
+        private static float[,] output_Z;
 
         private static CLBuffer a;
         private static CLBuffer z;
@@ -100,8 +100,11 @@ namespace OPENCL_n_body
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create command queue failed");
 
 
-            input_X = new float[env.particles.Length * 3];
-            output_Z = new float[env.particles.Length * 2];
+            //input_X = new float[env.particles.Length * 3];
+            //output_Z = new float[env.particles.Length * 2];
+
+            input_X = new float[env.particles.Length * 3, 8];
+            output_Z = new float[env.particles.Length * 2, 8];
 
             //float[] fsums = new float[env.particles.Length * env.particles.Length * 2];
 
@@ -140,6 +143,16 @@ namespace OPENCL_n_body
                 input_X[i + 1] = (float)particle.vy;
                 input_X[i + 2] = (float)particle.mass;
                 i += 3;
+            }
+            
+            for (int i = 0; i < env.particles.Length; i += 8)
+            {
+                for (int j = 0; j < 8; i++)
+                {
+                    output_Z[i + 0] = (float)env.particles[i + j].x;
+                    output_Z[i + 1] = (float)env.particles[i + j].y;
+                }
+            
             }
 
             resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
