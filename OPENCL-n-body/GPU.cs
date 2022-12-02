@@ -10,7 +10,7 @@ namespace OPENCL_n_body
 {
     class GPU
     {
-
+        a
         private static CLContext context;
         private static CLProgram program;
         private static CLKernel kernel1;
