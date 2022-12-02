@@ -1,4 +1,4 @@
-﻿__global float * input_A;
+﻿__glo	bal float * input_A;
 __global float * output_W;
 __global float G1;
 __global int size_X;
@@ -33,6 +33,7 @@ kernel void Attract()//Attract 1
 		sumX += distanceX * b;
 		sumY += distanceY * b;
 	}
+
 	input_A[i * 3] += sumX;
 	input_A[i * 3 + 1] += sumY;
 }

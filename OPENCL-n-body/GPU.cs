@@ -20,8 +20,8 @@ namespace OPENCL_n_body
         private static CLResultCode resultCode;
         private static CLEvent evnt;
 
-        private static float[,] input_X;
-        private static float[,] output_Z;
+        private static float[] input_X;
+        private static float[] output_Z;
 
         private static CLBuffer a;
         private static CLBuffer z;
@@ -40,7 +40,7 @@ namespace OPENCL_n_body
             // kernel2 = over memory
             // kernel3 = attr 2
             // kernel4 = attr 1
-            string sourceName = @"./Kernel4.cl";
+            string sourceName = @"./Kernel5.cl";
 
             string clProgramSource = File.ReadAllText(sourceName);
 
@@ -100,11 +100,11 @@ namespace OPENCL_n_body
             if (resultCode != CLResultCode.Success) Console.WriteLine("Create command queue failed");
 
 
-            //input_X = new float[env.particles.Length * 3];
-            //output_Z = new float[env.particles.Length * 2];
+            input_X = new float[env.particles.Length * 3];
+            output_Z = new float[env.particles.Length * 2];
 
-            input_X = new float[env.particles.Length * 3, 8];
-            output_Z = new float[env.particles.Length * 2, 8];
+            //input_X = new float[env.particles.Length * 3, 8];
+            //output_Z = new float[env.particles.Length * 2, 8];
 
             //float[] fsums = new float[env.particles.Length * env.particles.Length * 2];
 
@@ -144,7 +144,7 @@ namespace OPENCL_n_body
                 input_X[i + 2] = (float)particle.mass;
                 i += 3;
             }
-            
+            /*
             for (int i = 0; i < env.particles.Length; i += 8)
             {
                 for (int j = 0; j < 8; i++)
@@ -153,7 +153,7 @@ namespace OPENCL_n_body
                     output_Z[i + 1] = (float)env.particles[i + j].y;
                 }
             
-            }
+            }*/
 
             resultCode = CL.EnqueueWriteBuffer(queue, a, false, UIntPtr.Zero, input_X, null, out evnt);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Enque write buffer {a} failed");
@@ -164,7 +164,7 @@ namespace OPENCL_n_body
 
             resultCode = CL.EnqueueNDRangeKernel(queue, kernel3, 2, new UIntPtr[] { UIntPtr.Zero, UIntPtr.Zero }, new UIntPtr[] { (UIntPtr)1,
                                     (UIntPtr)1, (UIntPtr)1 }, null, 0, null, out evnt);
-            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel3 failed");
+            if (resultCode != CLResultCode.Success) Console.WriteLine("Enque NDRangeKernel Init failed");
         }
 
         public static void Run(Environment env)

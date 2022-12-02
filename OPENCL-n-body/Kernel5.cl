@@ -1,14 +1,29 @@
-﻿__global float ** input_A;
-__global float ** output_W;
+﻿__global float * input_A;
+__global float * output_W;
+__global float4 * x_position;
 __global float G1;
 __global int size_X;
 
-kernel void Init(global float** input_X, global float** output_Z, const float G, const int size)
+kernel void Init(global float* input_X, global float* output_Z, const float G, const int size)
 {
 	input_A = input_X;
 	output_W = output_Z;
 	G1 = G;
 	size_X = size;
+
+	float4 temp_x_position[size];
+
+	temp_x_position[0] = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+
+	/*
+	for (int i = 0; i < size * 2; i += 8)
+	{
+		x_position[i][0] = input_A[i];
+		x_position[i][1] = input_A[i + 2];
+		x_position[i][2] = input_A[i + 4];
+		x_position[i][3] = input_A[i + 6];
+	}
+	*/
 
 	printf("kernel variable Init\n");
 }
