@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
+using System.Numerics;
 using OpenTK.Compute.OpenCL;
 
 namespace OPENCL_n_body
 {
     class GPU
     {
-        a
         private static CLContext context;
         private static CLProgram program;
         private static CLKernel kernel1;
@@ -40,6 +40,7 @@ namespace OPENCL_n_body
             // kernel2 = over memory
             // kernel3 = attr 2
             // kernel4 = attr 1
+            // kernel5 = atomic_add with vectors
             string sourceName = @"./Kernel5.cl";
 
             string clProgramSource = File.ReadAllText(sourceName);
@@ -103,6 +104,12 @@ namespace OPENCL_n_body
             input_X = new float[env.particles.Length * 3];
             output_Z = new float[env.particles.Length * 2];
 
+            Vector<float>[] avc = new Vector<float>[8];
+
+            Ve
+
+
+
             //input_X = new float[env.particles.Length * 3, 8];
             //output_Z = new float[env.particles.Length * 2, 8];
 
@@ -124,6 +131,8 @@ namespace OPENCL_n_body
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {G} failed");
             resultCode = CL.SetKernelArg(kernel3, 3, env.particles.Length);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {l} failed");
+            CL.
+
             /*
             resultCode = CL.SetKernelArg(kernel3, 4, b);
             if (resultCode != CLResultCode.Success) Console.WriteLine("Set kernel arg {b} failed");
