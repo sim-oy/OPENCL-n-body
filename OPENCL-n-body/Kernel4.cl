@@ -1,5 +1,5 @@
-﻿__glo	bal float * input_A;
-__global float * output_W;
+﻿__global float* input_A;
+__global float* output_W;
 __global float G1;
 __global int size_X;
 
@@ -29,11 +29,10 @@ kernel void Attract()//Attract 1
 		float dist = sqrt(x2_y2 * x2_y2 * x2_y2);
 
 		float b = G1 * input_A[j * 3 + 2] / (dist + 0.000001f);
-		
+
 		sumX += distanceX * b;
 		sumY += distanceY * b;
 	}
-
 	input_A[i * 3] += sumX;
 	input_A[i * 3 + 1] += sumY;
 }
@@ -60,18 +59,13 @@ kernel void Move()
 kernel void Attract(global float* input_X, const float G)
 {
 	input_A = input_X;
-
 	int i = get_global_id(0);
 	int j = get_global_id(1);
-
 	float distanceX = input_X[j * 5] - input_X[i * 5];
 	float distanceY = input_X[j * 5 + 1] - input_X[i * 5 + 1];
 	float x2_y2 = distanceX * distanceX + distanceY * distanceY;
-
 	float dist = sqrt(x2_y2 * x2_y2 * x2_y2);
-
 	float b = G * input_X[j * 5 + 4] / (dist + 0.000001f);
-
 	AtomicAdd(&input_X[i * 5 + 2], distanceX * b);
 	AtomicAdd(&input_X[i * 5 + 3], distanceY * b);
 }
